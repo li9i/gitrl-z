@@ -1,0 +1,38 @@
+--- a/libgitg/gitg-init.vala
++++ b/libgitg/gitg-init.vala
+@@ -66,17 +66,27 @@
+ 	factory.register(typeof(Ggit.Commit),
+ 	                 typeof(Gitg.Commit));
+ 
+-	factory.register(typeof(Ggit.Remote),
+-	                 typeof(Gitg.Remote));
+-
+ 	// Add our own css provider
+-	Gtk.CssProvider? provider = Gitg.Resource.load_css("libgitg-style.css");
++	//
++	// gitrl-z severance: upstream passes Gdk.Screen.get_default() straight in,
++	// which is null when there is no display, and GTK then fails a critical
++	// assertion. gitrl-z must start without a display -- `gitrlz --version` and
++	// the not-a-repository error path both do (spec FR-104), and unit tests
++	// run headless -- so the styling is skipped when there is no screen to
++	// style. Registering the type factory above is the part that matters
++	// headlessly; CSS is only meaningful once a screen exists.
++	var screen = Gdk.Screen.get_default();
+ 
+-	if (provider != null)
++	if (screen != null)
+ 	{
+-		Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),
+-		                                         provider,
+-		                                         600);
++		Gtk.CssProvider? provider = Gitg.Resource.load_css("libgitg-style.css");
++
++		if (provider != null)
++		{
++			Gtk.StyleContext.add_provider_for_screen(screen,
++			                                         provider,
++			                                         600);
++		}
+ 	}
+ 
+ }

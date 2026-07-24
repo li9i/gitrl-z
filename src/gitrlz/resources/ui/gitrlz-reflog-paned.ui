@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The reflog activity's layout (spec FR-121), modelled on gitg 44's
+  gitg-history-paned.ui: refs panel on the left, and on the right a vertical
+  split with the reflog list above and the reset preview below.
+
+  The preview's commit list is gitg's own GitgCommitListView with gitg's own
+  column set and GitgCellRendererLanes — deliberately, and this is the whole
+  point of the rewrite. FR-101 reverses the Python implementation's
+  hash-first column order in favour of gitg's, because the graph should look
+  like gitg's by construction rather than by imitation.
+
+  Dropped relative to gitg: the panel stack switcher and the diff/files panel
+  stack, both out of scope.
+-->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <template class="GitrlzReflogPaned" parent="GtkPaned">
+    <property name="visible">True</property>
+    <property name="can_focus">True</property>
+    <property name="orientation">horizontal</property>
+    <property name="position">200</property>
+
+    <child>
+      <object class="GtkBox" id="d_sidebar">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+
+        <!--
+          The reflog limits (spec FR-155): a Time window and an Entries count,
+          above the refs list so they frame which reflog is chosen below. The
+          combos' default selections are set in code, because a GtkBuilder
+          "active" can be applied before the <items> exist.
+        -->
+        <child>
+          <object class="GtkGrid" id="d_limit_block">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="margin">6</property>
+            <property name="row_spacing">4</property>
+            <property name="column_spacing">6</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Time</property>
+                <property name="xalign">0</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="d_time_combo">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="hexpand">True</property>
+                <items>
+                  <item translatable="yes">Any time</item>
+                  <item translatable="yes">Last 10 minutes</item>
+                  <item translatable="yes">Last hour</item>
+                </items>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Entries</property>
+                <property name="xalign">0</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="d_entries_combo">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
+                <property name="has_entry">True</property>
+                <items>
+                  <item translatable="yes">All</item>
+                  <item translatable="yes">Last 10</item>
+                </items>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkScrolledWindow" id="d_scrolled_refs">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="hscrollbar_policy">never</property>
+            <property name="shadow-type">none</property>
+            <property name="width_request">180</property>
+            <child>
+              <object class="GtkListBox" id="d_refs_list">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="selection_mode">browse</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="resize">False</property>
+        <property name="shrink">False</property>
+      </packing>
+    </child>
+
+    <child>
+      <object class="GtkPaned" id="d_paned_panels">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="orientation">vertical</property>
+        <property name="position">450</property>
+
+        <child>
+          <object class="GtkBox" id="d_box_reflog">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+
+        <!--
+          Which reflog this is. The refs panel already says which row is
+          selected, but the panel is a list of names with no statement of
+          what selecting one does, and "main" in a sidebar does not by
+          itself say "the list on the right is main's reflog".
+        -->
+        <child>
+          <object class="GtkLabel" id="d_reflog_caption">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="xalign">0</property>
+            <property name="ellipsize">end</property>
+            <property name="margin_top">6</property>
+            <property name="margin_start">8</property>
+            <property name="margin_end">8</property>
+            <property name="margin_bottom">6</property>
+            <style>
+              <class name="gitrlz-caption"/>
+            </style>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkSearchBar" id="d_search_bar">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkSearchEntry" id="d_search_entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="width_request">320</property>
+                <property name="placeholder_text" translatable="yes">Filter by message or SHA</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkStack" id="d_stack_reflog">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+
+            <child>
+              <object class="GtkScrolledWindow" id="d_scrolled_reflog">
+                <property name="visible">True</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <property name="can_focus">True</property>
+                <property name="shadow-type">none</property>
+                <child>
+                  <object class="GtkTreeView" id="d_reflog_list">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="headers-visible">True</property>
+                    <property name="enable-search">False</property>
+                    <property name="fixed-height-mode">True</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="name">list</property>
+              </packing>
+            </child>
+
+            <!-- P-FR-14: a dimmed placeholder, not an empty table. -->
+            <child>
+              <object class="GtkLabel" id="d_reflog_placeholder">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">No reflog entries</property>
+                <style>
+                  <class name="dim-label"/>
+                </style>
+              </object>
+              <packing>
+                <property name="name">placeholder</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+          </object>
+          <packing>
+            <property name="resize">True</property>
+            <property name="shrink">False</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkBox" id="d_box_preview">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+
+            <!--
+              FR-125: the command banner. Its colours are fixed rather than
+              taken from the theme, so the pair stays legible against each
+              other under a light or a dark theme alike.
+            -->
+            <!--
+              The uncommitted-changes warning (item 1). Sits above the
+              command, not below it: it is a precondition of running the
+              command, so it has to be read first.
+            -->
+            <child>
+              <object class="GtkBox" id="d_warning">
+                <property name="visible">False</property>
+                <property name="no_show_all">True</property>
+                <property name="can_focus">False</property>
+                <property name="spacing">8</property>
+                <!--
+                  Per side rather than the `margin` shorthand: the shorthand
+                  sets all four, and a later margin_bottom next to it is at
+                  the mercy of the order GtkBuilder happens to apply them in.
+                  No bottom margin, because the warning and the command banner
+                  below it are one statement and they touch. The banner drops
+                  its own top margin to match, but only while the warning is
+                  up (set_warning_visible).
+                -->
+                <property name="margin_top">8</property>
+                <property name="margin_start">8</property>
+                <property name="margin_end">8</property>
+                <property name="margin_bottom">0</property>
+                <style>
+                  <class name="gitrlz-warning"/>
+                </style>
+                <child>
+                  <object class="GtkImage" id="d_warning_icon">
+                    <property name="visible">True</property>
+                    <property name="icon_name">dialog-warning-symbolic</property>
+                    <property name="icon_size">1</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="d_warning_label">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="hexpand">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkBox" id="d_banner">
+                <property name="visible">False</property>
+                <property name="no_show_all">True</property>
+                <property name="can_focus">False</property>
+                <property name="spacing">6</property>
+                <!--
+                  8 rather than 6, so the banner and the warning that sits on
+                  top of it share a left and right edge. Two filled strips
+                  that touch make a 2px step in the sides obvious in a way
+                  that two separated ones did not.
+                -->
+                <property name="margin">8</property>
+                <style>
+                  <class name="gitrlz-command-banner"/>
+                </style>
+                <child>
+                  <object class="GtkLabel" id="d_banner_label">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="hexpand">True</property>
+                    <property name="xalign">0</property>
+                    <property name="selectable">True</property>
+                    <property name="ellipsize">end</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="d_banner_copy">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="relief">none</property>
+                    <property name="tooltip_text" translatable="yes">Copy the command</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="visible">True</property>
+                        <property name="icon_name">edit-copy-symbolic</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+              </packing>
+            </child>
+
+            <!--
+              What the graph below is. Placed under the command rather than
+              over it, because it labels the graph, not the command — and
+              because the slot above the banner is where the consequence
+              line was, and this is not that (§2.7).
+
+              Hidden whenever there is no graph: a caption describing a
+              graph that is not on screen is worse than no caption.
+            -->
+            <child>
+              <object class="GtkLabel" id="d_graph_caption">
+                <property name="visible">False</property>
+                <property name="no_show_all">True</property>
+                <property name="can_focus">False</property>
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+                <property name="margin_start">8</property>
+                <property name="margin_end">8</property>
+                <property name="margin_bottom">6</property>
+                <style>
+                  <class name="gitrlz-caption"/>
+                </style>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkStack" id="d_stack_preview">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+
+                <child>
+                  <object class="GtkScrolledWindow" id="d_scrolled_preview">
+                    <property name="visible">True</property>
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="shadow-type">none</property>
+                    <child>
+                      <object class="GitgCommitListView" id="d_commit_list_view">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="fixed-height-mode">True</property>
+                        <property name="headers-visible">False</property>
+                        <property name="enable-search">False</property>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="column_subject">
+                            <property name="title" translatable="yes">Subject</property>
+                            <property name="sizing">fixed</property>
+                            <property name="resizable">True</property>
+                            <property name="expand">True</property>
+                            <property name="fixed-width">400</property>
+                            <child>
+                              <object class="GitgCellRendererLanes" id="renderer_subject">
+                                <property name="ellipsize">end</property>
+                              </object>
+                              <attributes>
+                                <attribute name="text">1</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="column_author">
+                            <property name="title" translatable="yes">Author</property>
+                            <property name="sizing">fixed</property>
+                            <property name="resizable">True</property>
+                            <property name="fixed-width">180</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="renderer_author">
+                                <property name="ellipsize">end</property>
+                              </object>
+                              <attributes>
+                                <attribute name="text">4</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <!--
+                            No <attributes> binding: the model's column 0 is the
+                            full 40-character hash, and the graph shows the
+                            abbreviated form to match the reflog list above. The
+                            activity installs a cell data func that reads the
+                            commit and shortens it (like the date column below).
+                          -->
+                          <object class="GtkTreeViewColumn" id="column_sha1">
+                            <property name="title" translatable="yes">SHA1</property>
+                            <property name="sizing">fixed</property>
+                            <property name="resizable">True</property>
+                            <property name="fixed-width">120</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="renderer_sha1">
+                                <property name="ellipsize">end</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <!--
+                            No <attributes> binding for this one. gitg's model
+                            hands out column 6 already worded as "2 days ago",
+                            and the graph wants an exact timestamp; the
+                            activity installs a cell data func that reads the
+                            commit object and formats it as ISO instead.
+                            Widened to fit "2026-07-20 10:00:00 +0200".
+                          -->
+                          <object class="GtkTreeViewColumn" id="column_date">
+                            <property name="title" translatable="yes">Date</property>
+                            <property name="sizing">fixed</property>
+                            <property name="resizable">True</property>
+                            <property name="fixed-width">210</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="renderer_date">
+                                <property name="ellipsize">end</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="name">graph</property>
+                  </packing>
+                </child>
+
+                <!-- P-FR-23, P-FR-24, P-FR-17's detached-HEAD case. -->
+                <child>
+                  <object class="GtkLabel" id="d_preview_placeholder">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Select an entry</property>
+                    <style>
+                      <class name="dim-label"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="name">placeholder</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="resize">True</property>
+            <property name="shrink">False</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="resize">True</property>
+        <property name="shrink">False</property>
+      </packing>
+    </child>
+  </template>
+</interface>

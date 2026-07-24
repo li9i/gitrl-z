@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  gitrl-z settings (spec FR-116).
+
+  Modelled on gitg's schema, reduced to keys gitrl-z actually reads. Spec
+  FR-115 is explicit that no control exists for a setting nothing honours;
+  the same rule applies here, so gitg's commit, clone, diff and gravatar
+  keys are all absent rather than carried along unused.
+-->
+<schemalist>
+  <enum id="@APPLICATION_ID@.Layout">
+    <value nick="horizontal" value="0"/>
+    <value nick="vertical" value="1"/>
+  </enum>
+
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences" path="@SCHEMA_PATH@/preferences/">
+    <child name="interface" schema="@APPLICATION_ID@.preferences.interface"/>
+    <child name="reflog" schema="@APPLICATION_ID@.preferences.reflog"/>
+  </schema>
+
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.interface" path="@SCHEMA_PATH@/preferences/interface/">
+    <key name="orientation" enum="@APPLICATION_ID@.Layout">
+      <default>'vertical'</default>
+      <summary>Orientation of the main interface (vertical or horizontal)</summary>
+      <description>
+        Setting that sets the orientation of the main interface.
+      </description>
+    </key>
+    <key name="use-default-font" type="b">
+      <default>true</default>
+      <summary>Use Default Font</summary>
+      <description>
+        Whether to use the system's default fixed width font for the reflog
+        list and the commit graph, instead of the font named below.
+      </description>
+    </key>
+    <key name="monospace-font-name" type="s">
+      <!-- Translators: This is a GSettings default value. Do NOT change or localize the quotation marks! -->
+      <default l10n="messages">'Monospace 12'</default>
+      <summary>Monospace Font</summary>
+      <description>
+        A custom monospace font. Only takes effect when "Use Default Font"
+        is turned off.
+      </description>
+    </key>
+    <key name="enable-monitoring" type="b">
+      <default>true</default>
+      <summary>Enable Monitoring</summary>
+      <description>
+        Automatically reload when external changes to .git are detected.
+        Turned off, only the refresh button and F5 reload.
+      </description>
+    </key>
+  </schema>
+
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.reflog" path="@SCHEMA_PATH@/preferences/reflog/">
+    <key name="collapse-inactive-lanes" type="i">
+      <default>2</default>
+      <summary>Collapse Inactive Lanes</summary>
+      <description>
+        Setting that indicates how much inactive lanes should be collapsed
+        in the reset preview graph.
+      </description>
+    </key>
+    <key name="collapse-inactive-lanes-enabled" type="b">
+      <default>true</default>
+      <summary>Collapse Inactive Lanes Enabled</summary>
+      <description>
+        Whether inactive lanes in the reset preview graph are collapsed.
+      </description>
+    </key>
+    <key name="topological-order" type="b">
+      <default>false</default>
+      <summary>Show History in Topological Order</summary>
+      <description>
+        Setting that indicates whether to show the commit history in
+        topological order rather than by date.
+      </description>
+    </key>
+    <key name="commit-limit" type="i">
+      <default>2000</default>
+      <summary>Commit Limit</summary>
+      <description>
+        The greatest number of commits the reset preview graph draws. Beyond
+        it, a final row notes that more commits are not shown.
+      </description>
+    </key>
+  </schema>
+
+  <schema id="@APPLICATION_ID@.state" path="@SCHEMA_PATH@/state/">
+    <child name="window" schema="@APPLICATION_ID@.state.window"/>
+    <child name="reflog" schema="@APPLICATION_ID@.state.reflog"/>
+  </schema>
+
+  <schema id="@APPLICATION_ID@.state.window" path="@SCHEMA_PATH@/state/window/">
+    <key name="state" type="i">
+      <default>0</default>
+    </key>
+    <key name="size" type="(ii)">
+      <default>(1000, 700)</default>
+    </key>
+  </schema>
+
+  <schema id="@APPLICATION_ID@.state.reflog" path="@SCHEMA_PATH@/state/reflog/">
+    <key name="paned-sidebar-position" type="i">
+      <default>200</default>
+    </key>
+    <key name="paned-panels-position" type="i">
+      <default>-1</default>
+    </key>
+  </schema>
+</schemalist>

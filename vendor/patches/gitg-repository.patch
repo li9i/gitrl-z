@@ -1,0 +1,35 @@
+--- a/libgitg/gitg-repository.vala
++++ b/libgitg/gitg-repository.vala
+@@ -23,7 +23,6 @@
+ public class Repository : Ggit.Repository
+ {
+ 	private HashTable<Ggit.OId, SList<Gitg.Ref>> d_refs;
+-	private Stage ?d_stage;
+ 
+ 	public string? name
+ 	{
+@@ -168,24 +167,6 @@
+ 		return base.get_head() as Ref;
+ 	}
+ 
+-	public static new Repository init_repository(File location, bool is_bare) throws Error
+-	{
+-		return Ggit.Repository.init_repository(location, is_bare) as Repository;
+-	}
+-
+-	public Stage stage
+-	{
+-		owned get
+-		{
+-			if (d_stage == null)
+-			{
+-				d_stage = new Stage(this);
+-			}
+-
+-			return d_stage;
+-		}
+-	}
+-
+ 	public Ggit.Signature get_signature_with_environment(Gee.Map<string, string> env, string envname = "COMMITER") throws Error
+ 	{
+ 		string? user = null;

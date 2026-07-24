@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- gitrl-z symbolic icon. Single colour, follows the theme's foreground. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <g fill="currentColor">
+    <circle cx="4.5" cy="13" r="1.6"/>
+    <circle cx="4.5" cy="9" r="1.6"/>
+    <path d="M3.9 11.4h1.2v0.4H3.9z"/>
+    <path d="M4.5 7.6a0.7 0.7 0 0 1-0.7-0.7V5.2a0.7 0.7 0 0 1 1.4 0v1.7a0.7 0.7 0 0 1-0.7 0.7z"/>
+    <path d="M4.5 4.5c2.8-2.1 6.4-1.2 7.4 1.6 0.7 2-0.2 4-2 5a0.7 0.7 0 0 1-0.7-1.2c1.3-0.7 1.9-2.1 1.4-3.4-0.7-2-3.3-2.6-5.3-1.1l1.1 0.9a0.4 0.4 0 0 1-0.2 0.7l-3 0.4a0.4 0.4 0 0 1-0.45-0.5l0.8-2.9a0.4 0.4 0 0 1 0.7-0.15z"/>
+  </g>
+</svg>

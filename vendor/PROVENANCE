@@ -1,0 +1,79 @@
+# Vendored source provenance
+
+gitrl-z vendors part of gitg's source (spec NFR-5, NFR-6). This file records
+exactly what was vendored, from where, and the evidence that it matches the
+gitg installed on the target platform.
+
+Recorded: 2026-07-21
+
+## Upstream
+
+    Project:  gitg
+    Version:  44
+    URL:      https://download.gnome.org/sources/gitg/44/gitg-44.tar.xz
+    SHA-256:  342a31684dab9671cd341bd3e3ce665adcee0460c2a081ddc493cdbc03132530
+    Size:     10629268 bytes
+    Licence:  GPL-2.0-or-later
+
+Re-fetch and verify with `./fetch-upstream.sh`. The extracted tree lands in
+`vendor/upstream/`, which is deliberately **not** committed — it is 19 MB of
+code we do not modify, reproducible on demand from the checksum above. What
+*is* committed is the closure cut from it (`src/vendor-gitg/`) and any patch
+applied to that closure (`vendor/patches/`).
+
+## Target platform
+
+    Distribution:  Ubuntu 24.04.3 LTS (noble)
+    Package:       gitg 44-1build2 (universe, amd64)
+    Reported:      `gitg --version` -> "gitg 44"
+
+## Does the vendored source match the installed gitg?
+
+Yes, exactly. This was verified rather than assumed, because the entire
+visual-parity premise depends on it.
+
+The check is not trivial: **Ubuntu's `gitg_44.orig.tar.xz` is not the same
+tarball as GNOME's `gitg-44.tar.xz`.**
+
+    GNOME   gitg-44.tar.xz         10629268 bytes
+            SHA-256 342a31684dab9671cd341bd3e3ce665adcee0460c2a081ddc493cdbc03132530
+
+    Ubuntu  gitg_44.orig.tar.xz    10629352 bytes
+            SHA-256 5b0e99ab3e7b94b0daa98ca8041d5ec9280ee0a2c28338a5506a968ac52e2354
+
+Ubuntu's orig tarball is cut from upstream git *after* the post-release
+version bump, so its `meson.build` reads `version: '45.alpha'`. Ubuntu then
+carries exactly one patch, which reverts that bump:
+
+    debian/patches/series
+      Revert-Bump-version-for-development.patch
+
+Diffing the two extracted trees gives exactly one differing file:
+
+    Files gitg-44/meson.build and ubuntu-orig/gitg-44/meson.build differ
+    3c3
+    <   version: '44',
+    ---
+    >   version: '45.alpha',
+
+Applying Ubuntu's patch to its own orig tree and diffing against the GNOME
+tarball gives **no differences at all**:
+
+    $ patch -p1 < debian/patches/Revert-Bump-version-for-development.patch
+    $ diff -rq gitg-44 ubuntu-patched
+    $ echo $?
+    0
+
+So GNOME's `gitg-44.tar.xz` is byte-for-byte the source Ubuntu's
+`gitg 44-1build2` binary was built from. Vendoring from GNOME is correct,
+and no Ubuntu patch needs carrying.
+
+The Ubuntu packaging tarball is kept alongside as `gitg_44-1build2.debian.
+tar.xz` (8 KB) for reference when writing our own `debian/` — notably its
+`Build-Depends`, which lists `libxml2-utils` rather than `libxml2-dev`,
+confirming libxml2 is a build-time tool (xmllint) and not a link dependency.
+
+## Licence consequence
+
+gitg is GPL-2.0-or-later. Vendoring its source makes gitrl-z
+GPL-2.0-or-later. See `COPYING` and `debian/copyright`.

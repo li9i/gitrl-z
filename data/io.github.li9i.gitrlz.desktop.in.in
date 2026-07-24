@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=gitrl-z
+Comment=Git reflog browser and reset preview
+Exec=@binary@ --no-wd %U
+TryExec=@binary@
+Terminal=false
+Type=Application
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Icon=@icon@
+Categories=GTK;Development;RevisionControl;
+Keywords=git;reflog;undo;reset;recover;
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=@binary@ --no-wd %U

@@ -1,0 +1,14 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+# A build daemon is headless and has neither Xvfb nor gitg, so the ui and
+# visual suites cannot run here — only the unit suite, which is display-free
+# by construction (the CLI tests deliberately run with DISPLAY unset). Running
+# the full suite would fail on the missing xvfb-run wrapper. The ui and visual
+# suites run in development, where a display and gitg are present.
+override_dh_auto_test:
+	meson test -C obj-$(DEB_HOST_GNU_TYPE) --suite unit --print-errorlogs

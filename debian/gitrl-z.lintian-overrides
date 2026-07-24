@@ -1,0 +1,8 @@
+# The initial upload targets a Launchpad PPA, not the Debian archive, so
+# there is no ITP bug for it to close. Lintian's own description of this tag
+# says it "can be ignored if the package is not intended for Debian".
+#
+# This override should be REMOVED, not renewed, if gitrl-z is ever submitted to
+# Debian: at that point an ITP bug exists and the changelog must close it.
+# That is the only override in the package (spec NFR-11).
+gitrl-z: initial-upload-closes-no-bugs

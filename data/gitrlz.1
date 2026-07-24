@@ -1,0 +1,73 @@
+.TH GITRLZ 1 "2026-07-21" "gitrl-z 0.1.0" "User Commands"
+.SH NAME
+gitrlz \- git reflog browser and reset preview
+.SH SYNOPSIS
+.B gitrlz
+.RI [ OPTION ...]
+.RI [ PATH ...]
+.SH DESCRIPTION
+.B gitrl-z
+shows the git reflog the way
+.BR gitg (1)
+shows commit history, and previews what a
+.B git reset \-\-hard
+would do before you run it.
+.PP
+The reflog remembers where every branch has been, including commits that a
+rebase rewrote or a reset abandoned.
+.B gitrlz
+lists it, and when an entry is selected it draws the commit graph as it
+would look if that entry's branch were reset there.
+.PP
+.B gitrlz
+is read only. It never writes to the repository: no ref is moved, no working
+tree is touched, no index is written. The preview is computed in memory, and
+the command that would produce it is shown for you to run yourself.
+.PP
+With no arguments,
+.B gitrlz
+opens the repository containing the current working directory. Outside a
+repository it opens a chooser listing recently used ones. Given a
+.IR PATH ,
+it opens the repository containing that path instead.
+.SH OPTIONS
+.TP
+.B \-\-new\-window
+Open a new window rather than reusing an existing one.
+.TP
+.B \-\-no\-wd
+Do not open the working directory's repository. Used by the desktop entry.
+.TP
+.B \-\-version
+Print the version and exit.
+.TP
+.B \-h ", " \-\-help
+Print a help message and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+Normal run.
+.TP
+.B 1
+A
+.I PATH
+argument is not inside a git repository, or the display could not be opened.
+.TP
+.B 2
+Usage error.
+.SH KEYBOARD SHORTCUTS
+.TP
+.B F5
+Reload the repository.
+.TP
+.B Ctrl+Q
+Quit.
+.SH SEE ALSO
+.BR git\-reflog (1),
+.BR git\-reset (1),
+.BR gitg (1)
+.SH AUTHOR
+alexandros filotheou <alexandros.filotheou@gmail.com>
+.PP
+gitrl-z is built from a vendored subtree of gitg, which is copyright its own
+authors and licensed GPL-2.0-or-later.

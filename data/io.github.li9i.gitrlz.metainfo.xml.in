@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 alexandros filotheou -->
+<component type="desktop-application">
+  <id>@APPLICATION_ID@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+
+  <name>gitrl-z</name>
+  <summary>Git reflog browser and reset preview</summary>
+
+  <description>
+    <p>
+      gitrl-z helps you undo the predicament you found yourself in in git. It
+      shows the reflog the way gitg shows history, and previews what a hard
+      reset would do before you run it.
+    </p>
+    <p>
+      The reflog remembers where every branch has been, including commits
+      that a rebase rewrote or a reset abandoned. gitrl-z lists it, and when
+      you click an entry it draws the commit graph as it would look if that
+      entry's branch were reset there.
+    </p>
+    <p>
+      Nothing is ever written to the repository. gitrl-z shows you the command
+      to run; running it stays your decision.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">@APPLICATION_ID@.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>A reflog with a rebase run, and the reset that would undo it drawn as a graph</caption>
+      <image>https://raw.githubusercontent.com/li9i/gitrl-z/master/docs/screenshots/reflog-activity.png</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/li9i/gitrl-z</url>
+  <url type="bugtracker">https://github.com/li9i/gitrl-z/issues</url>
+
+  <developer id="io.github.li9i">
+    <name>alexandros filotheou</name>
+  </developer>
+
+  <provides>
+    <binary>gitrlz</binary>
+  </provides>
+
+  <categories>
+    <category>Development</category>
+    <category>RevisionControl</category>
+  </categories>
+
+  <keywords>
+    <keyword>git</keyword>
+    <keyword>reflog</keyword>
+    <keyword>undo</keyword>
+    <keyword>reset</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-07-21">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

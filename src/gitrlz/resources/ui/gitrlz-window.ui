@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Modelled on gitg 44's gitg-window.ui (spec FR-113).
+
+  Removed relative to gitg: the clone button and the "add repository" button,
+  both of which start write operations, and the selection-mode button and its
+  cancel counterpart, which exist for gitg's bulk commit actions. What
+  remains is the layout gitg has: dash button on the left, activity switcher
+  centred, search and gear on the right.
+-->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <template class="GitrlzWindow" parent="GtkApplicationWindow">
+    <property name="can_focus">False</property>
+    <property name="show_menubar">False</property>
+
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="d_header_bar">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="show_close_button">True</property>
+
+        <child>
+          <object class="GtkButton" id="d_dash_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="tooltip_text" translatable="yes">Show the list of recently used repositories</property>
+            <property name="action_name">win.dash</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="icon_name">go-previous-symbolic</property>
+                <property name="icon_size">1</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="pack_type">start</property>
+          </packing>
+        </child>
+
+        <!--
+          Packed as an ordinary child rather than as the header bar's title
+          widget, which is what gitg does too. A custom title widget replaces
+          the title and subtitle entirely, and those carry the repository name
+          and path (FR-113).
+        -->
+        <child>
+          <object class="GtkStackSwitcher" id="d_activities_switcher">
+            <property name="visible">False</property>
+            <property name="can_focus">False</property>
+            <property name="stack">d_stack_activities</property>
+          </object>
+          <packing>
+            <property name="pack_type">start</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkMenuButton" id="d_gear_menu">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="tooltip_text" translatable="yes">Menu</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="icon_name">open-menu-symbolic</property>
+                <property name="icon_size">1</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkToggleButton" id="d_search_button">
+            <property name="visible">False</property>
+            <property name="can_focus">True</property>
+            <property name="tooltip_text" translatable="yes">Search the reflog</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="icon_name">edit-find-symbolic</property>
+                <property name="icon_size">1</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkBox" id="d_box_main">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+
+        <child>
+          <object class="GtkInfoBar" id="d_infobar">
+            <property name="visible">False</property>
+            <property name="no_show_all">True</property>
+            <property name="can_focus">False</property>
+            <property name="show_close_button">True</property>
+            <child internal-child="content_area">
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">4</property>
+                <child>
+                  <object class="GtkLabel" id="d_infobar_primary_label">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="d_infobar_secondary_label">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                    <attributes>
+                      <attribute name="scale" value="0.83"/>
+                    </attributes>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkStack" id="d_main_stack">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="homogeneous">False</property>
+
+            <child>
+              <object class="GtkStack" id="d_stack_activities">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="homogeneous">False</property>
+              </object>
+              <packing>
+                <property name="name">activities</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

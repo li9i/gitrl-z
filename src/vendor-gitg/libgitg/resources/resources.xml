@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Reduced from gitg 44's libgitg/resources/resources.xml.
+
+  The /org/gnome/gitg prefix is kept deliberately. Vendored Vala files
+  reference these paths in [GtkTemplate] attributes; rewriting the prefix
+  would mean patching every one of them for no benefit, since GResource
+  paths are internal to our binary and never collide with the installed
+  gitg (spec NFR-5 — stay byte-close to upstream).
+
+  Dropped relative to upstream: the diff-view resources, the authentication
+  dialog and the sidebar, all out of scope (spec 1.3). gitg-sidebar.ui goes
+  because nothing outside gitg-sidebar.vala itself uses Gitg.Sidebar, and
+  gitrl-z's refs panel derives from GitgHistoryRefsList (a Gtk.ListBox)
+  instead.
+-->
+<gresources>
+  <gresource prefix="/org/gnome/gitg">
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-repository-list-box-row.ui</file>
+
+    <file compressed="true">ui/libgitg-style.css</file>
+  </gresource>
+</gresources>

@@ -1,0 +1,35 @@
+# Visual regression environment (spec 6.3).
+#
+# Separate from Dockerfile on purpose. That image installs only gitrl-z's
+# declared Build-Depends, which is what makes a successful build there proof
+# that the list is complete. Installing gitg into it would drag in
+# gtksourceview-4, gspell, libpeas and the rest of the stack gitrl-z
+# deliberately dropped, and the proof would quietly evaporate.
+#
+# Here gitg is the point: both applications run under the same Xvfb, with the
+# same theme and fonts, so the geometry comparison is apples to apples. The
+# container's theme differs from any given desktop's, which does not matter —
+# what is compared is gitg against gitrl-z, not either against a reference
+# screenshot of somebody's machine.
+
+FROM gitrlz-build
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# gitg itself, and the fonts and theme needed for both applications to render
+# text identically. fonts-dejavu-core pins a font that is actually present:
+# falling back to a different family would change every text metric.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        fonts-dejavu-core \
+        gitg \
+        python3-numpy \
+        python3-pil \
+    && rm -rf /var/lib/apt/lists/*
+
+# Confirm the gitg under test is the one gitrl-z was vendored from. A different
+# version would invalidate the comparison silently.
+RUN test "$(dpkg-query -W -f='${Version}' gitg)" = "44-1build2" \
+    || (echo "gitg version is not 44-1build2; the vendored source no longer matches" >&2; exit 1)
+
+WORKDIR /src
+CMD ["/bin/bash"]

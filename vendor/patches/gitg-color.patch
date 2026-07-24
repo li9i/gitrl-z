@@ -1,0 +1,30 @@
+--- a/libgitg/gitg-color.vala
++++ b/libgitg/gitg-color.vala
+@@ -98,6 +98,27 @@
+ 		return ret;
+ 	}
+ 
++	/*
++	 * gitrl-z addition: a colour at a chosen index.
++	 *
++	 * Upstream only hands out colours in sequence, through next()/next_index(),
++	 * which is all the graph needs — it colours lanes in the order they open.
++	 * gitrl-z also colours the reflog list's branch chips and its operation
++	 * gutter, and those have to pick the *same* colour as the graph for a
++	 * given branch rather than the next one in a shared sequence (FR-102).
++	 *
++	 * Additive: no existing behaviour changes, and `palette` stays private,
++	 * so nothing outside this file has to know its size — from_index wraps
++	 * the index itself rather than exposing a bound to wrap against.
++	 */
++	public static Color from_index(uint index)
++	{
++		Color ret = new Color();
++		ret.idx = index % palette.length;
++
++		return ret;
++	}
++
+ 	public Color next_index()
+ 	{
+ 		this.idx = inc_index();

@@ -1,0 +1,21 @@
+--- a/libgitg/gitg-lanes.vala
++++ b/libgitg/gitg-lanes.vala
+@@ -115,7 +115,17 @@
+ 		d_collapsed = new HashTable<Ggit.OId, CollapsedLane>(Ggit.OId.hash,
+ 		                                                     Ggit.OId.equal);
+ 
+-		var settings = new Settings(Gitg.Config.APPLICATION_ID + ".preferences.history");
++		// gitrl-z severance: gitg reads these from its "preferences.history"
++		// schema, named for its History activity. gitrl-z has no history
++		// activity — it has a reflog activity — and its schema says so
++		// (spec FR-116). Renaming the lookup rather than adding a
++		// "preferences.history" child to our schema keeps the settings
++		// honest about what the application actually offers; a schema child
++		// existing only to satisfy vendored code would be worse.
++		//
++		// Both keys are present in ours with the same names and types, so
++		// nothing below changes.
++		var settings = new Settings(Gitg.Config.APPLICATION_ID + ".preferences.reflog");
+ 
+ 		settings.bind("collapse-inactive-lanes-enabled",
+ 		              this,

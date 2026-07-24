@@ -1,0 +1,41 @@
+# Meson build directories
+_build/
+build/
+
+# Vendored upstream working copy — reproducible via vendor/fetch-upstream.sh,
+# see vendor/PROVENANCE. Deliberately not committed.
+vendor/upstream/
+vendor/*.tar.xz
+!vendor/gitg_44-1build2.debian.tar.xz
+
+# Debian build products
+debian/gitrl-z/
+debian/gitrl-z-dbgsym/
+debian/.debhelper/
+debian/files
+debian/*.substvars
+debian/*.log
+debian/debhelper-build-stamp
+*.deb
+*.ddeb
+*.buildinfo
+*.changes
+
+# Flatpak build products (see flatpak/README.md)
+.flatpak-builder/
+/build-dir/
+/repo/
+
+# Personal scaffolding, kept locally, never published. .claude must stay at
+# the repository root for Claude Code to find it, so it is ignored here rather
+# than moved into .scaffolding with the rest.
+.scaffolding/
+.claude/
+
+# Test output
+tests/visual/output/
+
+# Python bytecode. The Python implementation is retired; tests/parity keeps
+# one script for the record.
+__pycache__/
+*.pyc

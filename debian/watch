@@ -1,0 +1,7 @@
+# gitrl-z is its own upstream: there is no third-party release feed to watch.
+# The file exists so a future Debian ITP finds the expected metadata in place.
+# Update the URL if releases are ever published as tarballs on GitHub.
+version=4
+opts=filenamemangle=s%(?:.*?)?v?(\d[\d.]*)\.tar\.gz%gitrl-z-$1.tar.gz% \
+  https://github.com/li9i/gitrl-z/tags \
+  (?:.*?/)?v?(\d[\d.]+)\.tar\.gz debian uupdate
