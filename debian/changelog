@@ -1,3 +1,23 @@
+gitrl-z (0.2.0-2) noble; urgency=medium
+
+  * Add git to Build-Depends. meson finds the program at configure time and
+    the unit suite builds fixture repositories with it, so a clean buildd
+    without git failed to configure.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Sun, 26 Jul 2026 12:07:48 +0200
+
+gitrl-z (0.2.0-1) noble; urgency=medium
+
+  * Preview and recover from a detached HEAD.
+  * Show the git command that each reflog entry records.
+  * Warn while a git operation is in progress and offer to abort it.
+  * Mark the checked-out branch, and offer to bring back a deleted or
+    recreated branch.
+  * Steady the graph under the command banner, open the reflog panels at
+    equal height, reword the captions and trim the preferences.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Sun, 26 Jul 2026 10:42:06 +0200
+
 gitrl-z (0.1.0-1) noble; urgency=medium
 
   * Initial release.

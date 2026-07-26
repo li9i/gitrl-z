@@ -231,6 +231,101 @@
             <property name="fill">True</property>
           </packing>
         </child>
+
+        <!--
+          The FR-140 warning and the FR-125 command banner sit at the bottom of
+          the reflog list, above the divider, rather than at the top of the
+          preview below it. Placed here, the reflog list gives up the space when
+          they appear and takes it back when they go, so the graph below the
+          divider keeps its height across a select and a deselect. The banner is
+          still visually between the two panes; only which pane yields the space
+          has changed.
+        -->
+        <child>
+          <object class="GtkBox" id="d_warning">
+            <property name="visible">False</property>
+            <property name="no_show_all">True</property>
+            <property name="can_focus">False</property>
+            <property name="spacing">8</property>
+            <!--
+              Per side rather than the `margin` shorthand: the shorthand sets
+              all four, and a later margin_bottom next to it is at the mercy of
+              the order GtkBuilder happens to apply them in. No bottom margin,
+              because the warning and the command banner below it are one
+              statement and they touch. The banner drops its own top margin to
+              match, but only while the warning is up (set_warning_visible).
+            -->
+            <property name="margin_top">8</property>
+            <property name="margin_start">8</property>
+            <property name="margin_end">8</property>
+            <property name="margin_bottom">0</property>
+            <style>
+              <class name="gitrlz-warning"/>
+            </style>
+            <child>
+              <object class="GtkImage" id="d_warning_icon">
+                <property name="visible">True</property>
+                <property name="icon_name">dialog-warning-symbolic</property>
+                <property name="icon_size">1</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="d_warning_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="hexpand">True</property>
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkBox" id="d_banner">
+            <property name="visible">False</property>
+            <property name="no_show_all">True</property>
+            <property name="can_focus">False</property>
+            <property name="spacing">6</property>
+            <property name="margin">8</property>
+            <style>
+              <class name="gitrlz-command-banner"/>
+            </style>
+            <child>
+              <object class="GtkLabel" id="d_banner_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="hexpand">True</property>
+                <property name="xalign">0</property>
+                <property name="selectable">True</property>
+                <property name="ellipsize">end</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="d_banner_copy">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="relief">none</property>
+                <property name="tooltip_text" translatable="yes">Copy the command</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="visible">True</property>
+                    <property name="icon_name">edit-copy-symbolic</property>
+                    <property name="icon_size">1</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
           </object>
           <packing>
             <property name="resize">True</property>
@@ -243,109 +338,6 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
-
-            <!--
-              FR-125: the command banner. Its colours are fixed rather than
-              taken from the theme, so the pair stays legible against each
-              other under a light or a dark theme alike.
-            -->
-            <!--
-              The uncommitted-changes warning (item 1). Sits above the
-              command, not below it: it is a precondition of running the
-              command, so it has to be read first.
-            -->
-            <child>
-              <object class="GtkBox" id="d_warning">
-                <property name="visible">False</property>
-                <property name="no_show_all">True</property>
-                <property name="can_focus">False</property>
-                <property name="spacing">8</property>
-                <!--
-                  Per side rather than the `margin` shorthand: the shorthand
-                  sets all four, and a later margin_bottom next to it is at
-                  the mercy of the order GtkBuilder happens to apply them in.
-                  No bottom margin, because the warning and the command banner
-                  below it are one statement and they touch. The banner drops
-                  its own top margin to match, but only while the warning is
-                  up (set_warning_visible).
-                -->
-                <property name="margin_top">8</property>
-                <property name="margin_start">8</property>
-                <property name="margin_end">8</property>
-                <property name="margin_bottom">0</property>
-                <style>
-                  <class name="gitrlz-warning"/>
-                </style>
-                <child>
-                  <object class="GtkImage" id="d_warning_icon">
-                    <property name="visible">True</property>
-                    <property name="icon_name">dialog-warning-symbolic</property>
-                    <property name="icon_size">1</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="d_warning_label">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="hexpand">True</property>
-                    <property name="xalign">0</property>
-                    <property name="wrap">True</property>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-              </packing>
-            </child>
-
-            <child>
-              <object class="GtkBox" id="d_banner">
-                <property name="visible">False</property>
-                <property name="no_show_all">True</property>
-                <property name="can_focus">False</property>
-                <property name="spacing">6</property>
-                <!--
-                  8 rather than 6, so the banner and the warning that sits on
-                  top of it share a left and right edge. Two filled strips
-                  that touch make a 2px step in the sides obvious in a way
-                  that two separated ones did not.
-                -->
-                <property name="margin">8</property>
-                <style>
-                  <class name="gitrlz-command-banner"/>
-                </style>
-                <child>
-                  <object class="GtkLabel" id="d_banner_label">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="hexpand">True</property>
-                    <property name="xalign">0</property>
-                    <property name="selectable">True</property>
-                    <property name="ellipsize">end</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkButton" id="d_banner_copy">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="relief">none</property>
-                    <property name="tooltip_text" translatable="yes">Copy the command</property>
-                    <child>
-                      <object class="GtkImage">
-                        <property name="visible">True</property>
-                        <property name="icon_name">edit-copy-symbolic</property>
-                        <property name="icon_size">1</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-              </packing>
-            </child>
 
             <!--
               What the graph below is. Placed under the command rather than

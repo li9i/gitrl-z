@@ -110,23 +110,6 @@ public class PreferencesDialog : Gtk.Dialog
 		var grid = new_page_grid();
 		var row = 0;
 
-		var collapse = new Gtk.CheckButton.with_mnemonic(_("Collapse inactive lanes"));
-		d_reflog_settings.bind("collapse-inactive-lanes-enabled", collapse, "active",
-		                       SettingsBindFlags.DEFAULT);
-		add_wide_row(grid, ref row, collapse);
-
-		var collapse_after = new Gtk.SpinButton.with_range(1, 20, 1);
-		d_reflog_settings.bind("collapse-inactive-lanes", collapse_after, "value",
-		                       SettingsBindFlags.DEFAULT);
-		d_reflog_settings.bind("collapse-inactive-lanes-enabled", collapse_after, "sensitive",
-		                       SettingsBindFlags.GET);
-		add_row(grid, ref row, _("Collapse after _lanes:"), collapse_after);
-
-		var topological = new Gtk.CheckButton.with_mnemonic(_("Show history in topological order"));
-		d_reflog_settings.bind("topological-order", topological, "active",
-		                       SettingsBindFlags.DEFAULT);
-		add_wide_row(grid, ref row, topological);
-
 		var limit = new Gtk.SpinButton.with_range(100, 100000, 100);
 		d_reflog_settings.bind("commit-limit", limit, "value", SettingsBindFlags.DEFAULT);
 		add_row(grid, ref row, _("_Maximum commits drawn:"), limit);

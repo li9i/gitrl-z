@@ -135,16 +135,37 @@ public class ResetPlan : Object
 	/**
 	 * Replace the whole plan with a single branch at `commit` (FR-148).
 	 *
-	 * The HEAD view's plain selection uses this: there a click or arrow travel
-	 * is one row, so choosing a row drops every other branch and keeps only the
-	 * chosen one. It is the counterpart to set_target, which keeps the others;
-	 * building a multi-branch plan from the HEAD view is then a Ctrl-click,
-	 * which toggles.
+	 * The HEAD view's single selection uses this: there a row is one branch, so
+	 * choosing it drops every other branch and keeps only the chosen one. It is
+	 * the counterpart to set_target, which keeps the others; arrow travel picks
+	 * this (it never deselects), a plain click picks set_only_or_clear (a second
+	 * click deselects), and a Ctrl-click toggles to build a multi-branch plan.
 	 */
 	public void set_only(string branch, Ggit.OId commit)
 	{
 		d_targets.clear();
 		d_targets[branch] = commit;
+	}
+
+	/**
+	 * Make `branch` at `commit` the whole plan, or clear it when it already is
+	 * (FR-148).
+	 *
+	 * The HEAD view's plain click uses this: the first click selects the row as
+	 * the sole target (set_only), and clicking that same row again removes it,
+	 * so the plan empties. It is set_only with a deselect, the single-selection
+	 * counterpart of toggle.
+	 */
+	public void set_only_or_clear(string branch, Ggit.OId commit)
+	{
+		if (contains(branch, commit))
+		{
+			d_targets.unset(branch);
+		}
+		else
+		{
+			set_only(branch, commit);
+		}
 	}
 
 	/**

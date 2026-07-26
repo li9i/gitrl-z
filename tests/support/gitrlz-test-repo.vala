@@ -84,6 +84,27 @@ public class Repo : Object
 		return new Repo(File.new_for_path(dir));
 	}
 
+	/**
+	 * Plant an in-progress-operation marker under the git directory.
+	 *
+	 * Lets a test assert the mid-operation warning without driving a real
+	 * conflicting rebase or merge. "rebase" creates the rebase-merge directory;
+	 * every other marker (MERGE_HEAD, CHERRY_PICK_HEAD, REVERT_HEAD, BISECT_LOG)
+	 * is written as an empty file, exactly as git leaves them.
+	 */
+	public void begin_operation(string marker) throws Error
+	{
+		var git_dir = path.get_child(".git");
+
+		if (marker == "rebase")
+		{
+			git_dir.get_child("rebase-merge").make_directory();
+			return;
+		}
+
+		FileUtils.set_contents(git_dir.get_child(marker).get_path(), "");
+	}
+
 	public void branch(string name) throws Error
 	{
 		git({"branch", name});
@@ -143,6 +164,17 @@ public class Repo : Object
 		run_git({"commit", "--quiet", "-m", message}, env);
 
 		return git({"rev-parse", "HEAD"}).strip();
+	}
+
+	/**
+	 * Delete a branch outright, as `git branch -D` does.
+	 *
+	 * Lets a test set up a deleted-branch recovery: the branch's name survives
+	 * in HEAD's reflog attribution after the ref itself is gone.
+	 */
+	public void delete_branch(string name) throws Error
+	{
+		git({"branch", "-D", name});
 	}
 
 	public void merge(string name, string message = "merge") throws Error

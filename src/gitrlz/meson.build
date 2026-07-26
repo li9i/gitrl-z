@@ -21,6 +21,7 @@ gitrlz_lib_sources = files(
   'gitrlz-reflog-filter.vala',
   'gitrlz-reflog.vala',
   'gitrlz-repository.vala',
+  'gitrlz-synthetic-ref.vala',
   'gitrlz-window.vala',
 )
 

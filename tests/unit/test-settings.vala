@@ -50,7 +50,6 @@ private static void test_reflog_defaults()
 
 	assert_cmpint(s.get_int("collapse-inactive-lanes"), CompareOperator.EQ, 2);
 	assert_true(s.get_boolean("collapse-inactive-lanes-enabled"));
-	assert_false(s.get_boolean("topological-order"));
 	// P-FR-22: the graph draws at most this many commits.
 	assert_cmpint(s.get_int("commit-limit"), CompareOperator.EQ, 2000);
 }
@@ -74,10 +73,6 @@ private static void test_reflog_state_defaults()
 	var s = settings_for("state.reflog");
 
 	assert_cmpint(s.get_int("paned-sidebar-position"), CompareOperator.EQ, 200);
-
-	// -1 is the "no saved divider yet" sentinel: on first open the panels
-	// split is centred at runtime rather than restored from a stored pixel.
-	assert_cmpint(s.get_int("paned-panels-position"), CompareOperator.EQ, -1);
 }
 
 private static void test_values_round_trip()
@@ -88,9 +83,6 @@ private static void test_values_round_trip()
 
 	s.set_int("commit-limit", 500);
 	assert_cmpint(s.get_int("commit-limit"), CompareOperator.EQ, 500);
-
-	s.set_boolean("topological-order", true);
-	assert_true(s.get_boolean("topological-order"));
 
 	var i = settings_for("preferences.interface");
 

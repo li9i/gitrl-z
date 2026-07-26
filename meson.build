@@ -1,6 +1,6 @@
 project(
   'gitrl-z', ['c', 'vala'],
-  version: '0.1.0',
+  version: '0.2.0',
   license: 'GPL-2.0-or-later',
   default_options: 'buildtype=debugoptimized',
   # gitg targets 0.50; we need 0.59 for gnome.post_install's

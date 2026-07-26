@@ -26,6 +26,9 @@ debian/debhelper-build-stamp
 /build-dir/
 /repo/
 
+# AppImage build product (see scripts/build-appimage.sh)
+*.AppImage
+
 # Personal scaffolding, kept locally, never published. .claude must stay at
 # the repository root for Claude Code to find it, so it is ignored here rather
 # than moved into .scaffolding with the rest.

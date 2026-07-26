@@ -101,6 +101,57 @@ public class Repository : Object
 	}
 
 	/**
+	 * Which multi-step git operation is in progress, or null (IC-164).
+	 *
+	 * Ggit does not expose repository state, so the same filesystem markers
+	 * libgit2's git_repository_state inspects are read directly under the git
+	 * directory: rebase-merge/ or rebase-apply/ for a rebase, then MERGE_HEAD,
+	 * CHERRY_PICK_HEAD, REVERT_HEAD and BISECT_LOG. Checked in that fixed
+	 * precedence, the first match wins.
+	 *
+	 * A pure, read-only function of the filesystem (NFR-44, NFR-45). An
+	 * unreadable or absent git directory reports no operation rather than
+	 * inventing one (spec section 5).
+	 */
+	public static string? operation_in_progress(Gitg.Repository repository)
+	{
+		var git_dir = git_directory(repository);
+
+		if (git_dir == null)
+		{
+			return null;
+		}
+
+		if (git_dir.get_child("rebase-merge").query_exists()
+		    || git_dir.get_child("rebase-apply").query_exists())
+		{
+			return "rebase";
+		}
+
+		if (git_dir.get_child("MERGE_HEAD").query_exists())
+		{
+			return "merge";
+		}
+
+		if (git_dir.get_child("CHERRY_PICK_HEAD").query_exists())
+		{
+			return "cherry-pick";
+		}
+
+		if (git_dir.get_child("REVERT_HEAD").query_exists())
+		{
+			return "revert";
+		}
+
+		if (git_dir.get_child("BISECT_LOG").query_exists())
+		{
+			return "bisect";
+		}
+
+		return null;
+	}
+
+	/**
 	 * A branch's short name: "main", not "refs/heads/main".
 	 *
 	 * The object factory hands back a Gitg.BranchBase, whose get_name()

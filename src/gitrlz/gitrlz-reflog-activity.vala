@@ -201,29 +201,19 @@ public class ReflogPaned : Gtk.Paned
 		d_state_settings.bind("paned-sidebar-position", this, "position",
 		                      SettingsBindFlags.DEFAULT);
 
-		// The panels split has no saved divider on first open (the schema
-		// default is -1). Wait for the first real allocation and put the
-		// divider at the halfway mark, so the reflog list and the graph open
-		// the same height. A saved divider is restored instead, and either way
-		// later moves are persisted.
-		if (d_state_settings.get_int("paned-panels-position") >= 0)
-		{
-			d_paned_panels.position = d_state_settings.get_int("paned-panels-position");
-		}
-		else
-		{
-			ulong handler = 0;
-			handler = d_paned_panels.size_allocate.connect((alloc) => {
-				if (alloc.height <= 1)
-					return;
+		// Open the reflog list and the graph at the same height. The divider is
+		// deliberately not remembered across sessions: it was stored as an
+		// absolute pixel offset, and a value chosen for one window height leaves
+		// the panes lopsided at another (a divider from a tall window buried the
+		// bottom pane in a short one). So the panels open halfway every time
+		// instead, computed from the first real allocation.
+		ulong handler = 0;
+		handler = d_paned_panels.size_allocate.connect((alloc) => {
+			if (alloc.height <= 1)
+				return;
 
-				d_paned_panels.disconnect(handler);
-				d_paned_panels.position = alloc.height / 2;
-			});
-		}
-
-		d_paned_panels.notify["position"].connect(() => {
-			d_state_settings.set_int("paned-panels-position", d_paned_panels.position);
+			d_paned_panels.disconnect(handler);
+			d_paned_panels.position = alloc.height / 2;
 		});
 
 		d_list = new ReflogList(d_reflog_list);
@@ -517,6 +507,23 @@ public class ReflogPaned : Gtk.Paned
 		return ids;
 	}
 
+	/** The visible label of the sidebar row with id `id`, or "" — for the tests. */
+	public string ref_label(string id)
+	{
+		foreach (var child in d_refs_list.get_children())
+		{
+			var row = child as Gtk.ListBoxRow;
+
+			if (row != null && row.get_data<string>("ref") == id)
+			{
+				var label = row.get_child() as Gtk.Label;
+				return label != null ? label.label : "";
+			}
+		}
+
+		return "";
+	}
+
 	/**
 	 * Select a sidebar entry by id. Returns false when it is not present.
 	 */
@@ -701,7 +708,14 @@ public class ReflogPaned : Gtk.Paned
 
 		foreach (var branch in d_branches)
 		{
-			add_ref_row(branch, branch, false);
+			// Mark the branch HEAD is on, so the sidebar says where you are
+			// sitting. Nothing is marked when HEAD is detached (d_current_branch
+			// is null then). The id stays the bare branch name; only the visible
+			// label gains the note.
+			var label = branch == d_current_branch
+				? _("%s (checked out)").printf(branch)
+				: branch;
+			add_ref_row(branch, label, false);
 		}
 
 		if (Repository.has_stash(d_repository))
@@ -768,7 +782,16 @@ public class ReflogPaned : Gtk.Paned
 
 			if (d_plan.target_for(id) != null)
 			{
-				attrs.insert(Pango.attr_weight_new(Pango.Weight.BOLD));
+				// Bound the bold to the branch name only. The checked-out
+				// branch's label carries a " (checked out)" note, and that note
+				// stays normal weight: id.length is the byte offset where the
+				// name ends, and Pango attribute indices are byte offsets. For a
+				// branch without the note the label is just the name, so the same
+				// bound covers all of it.
+				var bold = Pango.attr_weight_new(Pango.Weight.BOLD);
+				bold.start_index = 0;
+				bold.end_index = id.length;
+				attrs.insert((owned) bold);
 			}
 
 			label.set_attributes(attrs);
@@ -889,7 +912,7 @@ public class ReflogPaned : Gtk.Paned
 		}
 		else
 		{
-			base_text = _("Reflog for %s").printf(d_view);
+			base_text = _("Reflog for branch %s").printf(d_view);
 		}
 
 		// FR-161: when a limit is active and the reflog is not empty, show how
@@ -916,18 +939,23 @@ public class ReflogPaned : Gtk.Paned
 		/** Set this branch's target, keeping branches chosen in other views
 		 * (arrow travel in a branch view). */
 		SET_TARGET,
-		/** Replace the whole plan with this one row (a plain click or arrow
-		 * travel in the HEAD view). */
-		SELECT_ONLY
+		/** Replace the whole plan with this one row (arrow travel in the HEAD
+		 * view, which tracks a single selection and never clears it). */
+		SELECT_ONLY,
+		/** Make this row the only selection, or clear it when it already is
+		 * (a plain click in the HEAD view, so clicking the selected row again
+		 * deselects it). */
+		SELECT_OR_DESELECT
 	}
 
 	/**
 	 * How a plain or Ctrl-click folds a row in, given the current view.
 	 *
-	 * The HEAD view is a single selection: a plain click replaces the plan, a
-	 * Ctrl-click toggles so several branches can be gathered. A branch view
-	 * holds one branch, so its click has always toggled that branch in or out
-	 * and Ctrl adds nothing there.
+	 * The HEAD view is a single selection: a plain click makes the row the sole
+	 * selection, or clears it when it already is, so clicking it again
+	 * deselects. A Ctrl-click toggles so several branches can be gathered. A
+	 * branch view holds one branch, so its click has always toggled that branch
+	 * in or out and Ctrl adds nothing there.
 	 */
 	private PlanFold click_fold(bool ctrl)
 	{
@@ -936,7 +964,7 @@ public class ReflogPaned : Gtk.Paned
 			return PlanFold.TOGGLE;
 		}
 
-		return ctrl ? PlanFold.TOGGLE : PlanFold.SELECT_ONLY;
+		return ctrl ? PlanFold.TOGGLE : PlanFold.SELECT_OR_DESELECT;
 	}
 
 	/**
@@ -981,6 +1009,17 @@ public class ReflogPaned : Gtk.Paned
 			return;
 		}
 
+		// Mid-operation takes precedence over everything: nothing here can be
+		// planned until the rebase, merge, cherry-pick, revert or bisect is
+		// finished or aborted, so a click shows the way out instead.
+		var operation = Repository.operation_in_progress(d_repository);
+
+		if (operation != null)
+		{
+			show_operation_preview(operation);
+			return;
+		}
+
 		// A stash is not a branch position (FR-142): show how to apply it, and
 		// never fold it into a branch plan. What someone wants from a stash is
 		// their files back.
@@ -990,12 +1029,24 @@ public class ReflogPaned : Gtk.Paned
 			return;
 		}
 
+		// A detached HEAD has no branch to reset, so clicking an entry plans
+		// nothing; update_preview owns showing the way back instead (Option 3).
+		// Applying a stash is unaffected, which is why this comes after the
+		// stash case.
+		if (d_current_branch == null)
+		{
+			update_preview();
+			return;
+		}
+
 		var branch = ResetPreview.target_branch_for(d_view, d_list.branch_at(path), d_tips);
 
 		if (branch == null)
 		{
-			// A branchless (detached-HEAD) row, or one naming a branch that no
-			// longer exists: nothing to move (FR-148).
+			// A branchless row: a detached-HEAD stretch attributed to no
+			// branch, so there is nothing to move or recreate (FR-148). A row
+			// naming a deleted branch is not branchless and folds in below, to
+			// be recreated (FR-166).
 			show_preview_placeholder(_("No branch to move for this entry"));
 			return;
 		}
@@ -1024,6 +1075,11 @@ public class ReflogPaned : Gtk.Paned
 			case PlanFold.SELECT_ONLY:
 				d_plan.set_only(branch, entry.new_id);
 				break;
+			case PlanFold.SELECT_OR_DESELECT:
+				// Clicking the row that is already the sole selection clears it;
+				// any other row becomes the new sole selection.
+				d_plan.set_only_or_clear(branch, entry.new_id);
+				break;
 		}
 
 		d_list.refresh_plan_marks();
@@ -1040,15 +1096,7 @@ public class ReflogPaned : Gtk.Paned
 	 */
 	public bool toggle_entry(int index)
 	{
-		var path = d_list.view_path_for(index);
-
-		if (path == null)
-		{
-			return false;
-		}
-
-		plan_path(path, PlanFold.TOGGLE);
-		return true;
+		return fold_entry(index, PlanFold.TOGGLE);
 	}
 
 	/**
@@ -1061,6 +1109,30 @@ public class ReflogPaned : Gtk.Paned
 	 */
 	public bool select_entry(int index)
 	{
+		return fold_entry(index, arrow_fold());
+	}
+
+	/**
+	 * Click the entry at a store index (FR-148).
+	 *
+	 * Exposed for the tests, matching a plain primary click: in the HEAD view it
+	 * makes the row the sole selection, or clears it when it already is; in a
+	 * branch view it toggles that branch. Returns false when the index is out of
+	 * range or the search filter hides it.
+	 */
+	public bool click_entry(int index)
+	{
+		return fold_entry(index, click_fold(false));
+	}
+
+	/**
+	 * Fold the entry at a store index into the plan, for the three test hooks.
+	 *
+	 * Returns false when the index is out of range or the search filter hides
+	 * it, so a test can tell an ignored input from an acted-on one.
+	 */
+	private bool fold_entry(int index, PlanFold fold)
+	{
 		var path = d_list.view_path_for(index);
 
 		if (path == null)
@@ -1068,7 +1140,7 @@ public class ReflogPaned : Gtk.Paned
 			return false;
 		}
 
-		plan_path(path, arrow_fold());
+		plan_path(path, fold);
 		return true;
 	}
 
@@ -1292,11 +1364,25 @@ public class ReflogPaned : Gtk.Paned
 		foreach (var branch in d_plan.branches())
 		{
 			var target = d_plan.target_for(branch);
+
+			if (target == null)
+			{
+				continue;
+			}
+
 			var from = d_tips.has_key(branch) ? d_tips[branch] : null;
 
-			// No target, no known real position, or a move to where it already
-			// is: nothing to relocate.
-			if (target == null || from == null || from.equal(target))
+			// A branch not among the current tips is being recreated (FR-166):
+			// it has no live pill to move, so draw a synthetic one at the commit
+			// `git branch <name> <sha>` would put it on.
+			if (from == null)
+			{
+				add_label(target, new SyntheticBranchRef(branch));
+				continue;
+			}
+
+			// A move to where the branch already is relocates nothing.
+			if (from.equal(target))
 			{
 				continue;
 			}
@@ -1408,6 +1494,28 @@ public class ReflogPaned : Gtk.Paned
 			return;
 		}
 
+		// A repository mid-operation comes first: a rebase, merge, cherry-pick,
+		// revert or bisect must be finished or aborted before a reset or a
+		// checkout means anything. A rebase and a bisect detach HEAD, so this
+		// has to be tested before the detached case below, or it would offer
+		// `git checkout -` in the middle of a rebase.
+		var operation = Repository.operation_in_progress(d_repository);
+
+		if (operation != null)
+		{
+			show_operation_preview(operation);
+			return;
+		}
+
+		// A detached HEAD shows the way back on to a branch rather than a tree
+		// to reset (Option 3). The stash view is exempt: applying a stash works
+		// whether or not HEAD is on a branch.
+		if (d_current_branch == null && d_view != "stash")
+		{
+			show_detached_preview();
+			return;
+		}
+
 		var tips = ResetPreview.preview_tips(d_tips, d_plan);
 
 		// No tips to draw at all (an unborn HEAD, say): nothing to show.
@@ -1455,13 +1563,13 @@ public class ReflogPaned : Gtk.Paned
 			refresh_copied();
 			d_banner.hide();
 			set_warning_visible(false);
-			d_graph_caption.label = _("Your repository as it is now");
+			d_graph_caption.label = _("Repository current state");
 			d_graph_caption.show();
 			d_stack_preview.visible_child_name = "graph";
 			return;
 		}
 
-		d_command = ResetPreview.command_for(d_plan, d_current_branch);
+		d_command = ResetPreview.command_for(d_plan, d_current_branch, d_tips.keys);
 		d_banner_label.label = d_command;
 		refresh_copied();
 		d_banner.show();
@@ -1477,20 +1585,22 @@ public class ReflogPaned : Gtk.Paned
 	/**
 	 * The caption over the graph (FR-146, revisited for the plan).
 	 *
-	 * One planned branch keeps the wording that names it; two or more drop the
-	 * clause, because there is no single branch to name. Derived from the same
-	 * plan the command is, so caption and command cannot disagree.
+	 * One planned branch that still exists keeps the wording that names it as
+	 * moved; two or more drop the clause, because there is no single branch to
+	 * name. A single recreated branch (one no longer among the tips) is not
+	 * moved either, so it takes the plain caption too (FR-166). Derived from
+	 * the same plan the command is, so caption and command cannot disagree.
 	 */
 	private string graph_caption_text()
 	{
 		var branches = d_plan.branches();
 
-		if (branches.size == 1)
+		if (branches.size == 1 && d_tips.has_key(branches[0]))
 		{
-			return _("Your branches as they would be after the command above, with %s moved").printf(branches[0]);
+			return _("Repository state after execution of the command above, with %s moved").printf(branches[0]);
 		}
 
-		return _("Your branches as they would be after the command above");
+		return _("Repository state after execution of the command above");
 	}
 
 	/**
@@ -1668,14 +1778,67 @@ public class ReflogPaned : Gtk.Paned
 	 */
 	private void show_stash_preview(ReflogEntry entry)
 	{
-		d_command = "git stash apply %s".printf(entry.selector);
+		show_command_note("git stash apply %s".printf(entry.selector),
+			_("Applying a stash changes your files, not your branches, so there is no new history to show."));
+	}
+
+	/**
+	 * What to do when HEAD is detached.
+	 *
+	 * With a detached HEAD there is no branch to reset, so reset planning is
+	 * switched off until you are back on one: a `git branch -f` would move a ref
+	 * while leaving HEAD detached, which looks like it did nothing, and moving
+	 * the branch you are notionally on is not possible because there is none.
+	 * So the preview offers only the way back, `git checkout -`, and explains
+	 * why.
+	 */
+	private void show_detached_preview()
+	{
+		show_command_note("git checkout -",
+			_("HEAD is detached, so you are not on a branch and there is nothing to reset. Run the command above to return to the branch you were on, then plan a reset from there."));
+	}
+
+	/** The command that ends an in-progress operation (IC-164 tokens). */
+	private static string operation_command(string operation)
+	{
+		// Every operation but bisect ends with `--abort`; bisect ends with
+		// `git bisect reset`.
+		return operation == "bisect" ? "git bisect reset"
+		                             : "git %s --abort".printf(operation);
+	}
+
+	/**
+	 * What to do when a git operation is in progress (FR-165).
+	 *
+	 * A rebase, merge, cherry-pick, revert or bisect has to be finished or
+	 * aborted before a reset or a checkout means anything, so reset planning is
+	 * off and the preview offers the one command that undoes the operation. A
+	 * rebase and a bisect leave HEAD detached, which is why this is reached
+	 * before the detached-HEAD case, so it does not offer `git checkout -` in
+	 * the middle of a rebase.
+	 */
+	private void show_operation_preview(string operation)
+	{
+		show_command_note(operation_command(operation),
+			_("A %s is in progress. Finish it, or run the command above to abort and undo it. Reset planning is off until you do.").printf(operation));
+	}
+
+	/**
+	 * Show a copyable command and a note, with no graph.
+	 *
+	 * The shape both the stash and the detached-HEAD previews want: a command
+	 * that moves no ref, so there is nothing for the graph to show, and a note
+	 * saying why. The banner carries the command; the warning and the graph
+	 * caption come down (and any stale tips and labels are cleared) so the pane
+	 * does not keep showing the last reset's graph beside it.
+	 */
+	private void show_command_note(string command, string note)
+	{
+		d_command = command;
 		d_banner_label.label = d_command;
 		refresh_copied();
 		d_banner.show();
 
-		// Nothing here destroys uncommitted work, so no red warning; and no
-		// graph caption, because there is no graph — the pane must not keep
-		// showing the last reset's, either.
 		set_warning_visible(false);
 		d_graph_caption.hide();
 
@@ -1683,8 +1846,7 @@ public class ReflogPaned : Gtk.Paned
 		d_preview_labels = new HashTable<Ggit.OId, GLib.SList<Gitg.Ref>>(
 			Ggit.OId.hash, Ggit.OId.equal);
 
-		d_preview_placeholder.label =
-			_("Applying a stash changes your files, not your branches, so there is no new history to show.");
+		d_preview_placeholder.label = note;
 		d_stack_preview.visible_child_name = "placeholder";
 	}
 

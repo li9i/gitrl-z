@@ -40,8 +40,10 @@ unit_tests = [
   'branch-colours',
   'reflog',
   'reflog-filter',
+  'repository-state',
   'reset-plan',
   'reset-preview',
+  'synthetic-ref',
 ]
 
 # The CLI tests spawn the real binary, and the settings tests need the

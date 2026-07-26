@@ -69,14 +69,6 @@
         Whether inactive lanes in the reset preview graph are collapsed.
       </description>
     </key>
-    <key name="topological-order" type="b">
-      <default>false</default>
-      <summary>Show History in Topological Order</summary>
-      <description>
-        Setting that indicates whether to show the commit history in
-        topological order rather than by date.
-      </description>
-    </key>
     <key name="commit-limit" type="i">
       <default>2000</default>
       <summary>Commit Limit</summary>
@@ -104,9 +96,6 @@
   <schema id="@APPLICATION_ID@.state.reflog" path="@SCHEMA_PATH@/state/reflog/">
     <key name="paned-sidebar-position" type="i">
       <default>200</default>
-    </key>
-    <key name="paned-panels-position" type="i">
-      <default>-1</default>
     </key>
   </schema>
 </schemalist>

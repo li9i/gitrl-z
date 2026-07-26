@@ -43,24 +43,23 @@ public class ResetPreview : Object
 	 *  - in the `all` view, the branch the row itself is attributed to
 	 *    (P-FR-16).
 	 *
-	 * A row with no attributed branch, or one naming a branch not present in
-	 * the current tips, is not togglable and returns null: a branch that does
-	 * not exist cannot be moved by `git branch -f` or `git reset --hard`, and
-	 * gitrl-z does not create one or silently retarget the checked-out branch.
-	 * The `stash` view never reaches here (it keeps FR-142's own preview).
+	 * A row with no attributed branch returns null: a detached-HEAD position
+	 * has no branch to move, and the `stash` view never reaches here (it keeps
+	 * FR-142's own preview). The attribution is already null for a detached or
+	 * bare-hash position, never a hash, so it is either null or a real branch
+	 * name.
+	 *
+	 * A real branch name that is no longer among the current tips is returned
+	 * all the same (IC-166): it names a deleted branch, and the plan can
+	 * recreate it at the row's commit with `git branch <name> <sha>`. The
+	 * `tips` map is kept in the signature so callers need not change, though
+	 * membership no longer gates the answer.
 	 */
 	public static string? target_branch_for(string view,
 	                                        string? row_branch,
 	                                        Gee.Map<string, Ggit.OId> tips)
 	{
-		string? branch = (view != "all" && view != "stash") ? view : row_branch;
-
-		if (branch == null || !tips.has_key(branch))
-		{
-			return null;
-		}
-
-		return branch;
+		return (view != "all" && view != "stash") ? view : row_branch;
 	}
 
 	/**
@@ -119,23 +118,34 @@ public class ResetPreview : Object
 	}
 
 	/**
-	 * The command that would produce the whole plan (FR-149).
+	 * The command that would produce the whole plan (FR-149, IC-165).
 	 *
-	 * One rule per branch: a branch that is not the checked-out one is moved
-	 * with `git branch -f`, which repoints the ref without touching the working
-	 * tree and leaves a reflog entry, so the move stays recoverable inside
-	 * gitrl-z; the checked-out branch, if it is in the plan, is moved with
-	 * `git reset --hard`, because a checked-out ref cannot be moved by
-	 * `git branch -f`, and this is the one move that updates the working tree.
+	 * One rule per branch, told apart by what the branch is now, using the set
+	 * of branches that currently exist (`existing`, the tips key set):
 	 *
-	 * The `git branch -f` lines come first, in the plan's branch-name order;
-	 * the single `git reset --hard`, if any, comes last, so the working-tree
-	 * change is the final step. Joined with `; ` on one line. An empty plan is
-	 * the empty string. A null `current_branch` (detached HEAD) means no line
-	 * is a reset: every move is a `git branch -f`, and nothing touches the
-	 * working tree.
+	 *  - the checked-out branch is moved with `git reset --hard`, because a
+	 *    checked-out ref cannot be moved by `git branch -f`, and this is the
+	 *    one move that updates the working tree;
+	 *  - a branch that still exists but is not the checked-out one is moved
+	 *    with `git branch -f`, which repoints the ref without touching the
+	 *    working tree and leaves a reflog entry, so the move stays recoverable
+	 *    inside gitrl-z;
+	 *  - a branch that no longer exists is recreated with plain `git branch`
+	 *    (no `-f`), which brings a deleted branch back at the row's commit
+	 *    (FR-166).
+	 *
+	 * The branch lines come first, in the plan's branch-name order; the single
+	 * `git reset --hard`, if any, comes last, so the working-tree change is the
+	 * final step. Joined with `; ` on one line. An empty plan is the empty
+	 * string. A null `current_branch` (detached HEAD) means no line is a reset:
+	 * every move is a `git branch -f` or a recreate, and nothing touches the
+	 * working tree. The activity does not reach this with a detached HEAD in
+	 * practice (it offers a way back on to a branch instead), but the rule
+	 * holds regardless.
 	 */
-	public static string command_for(ResetPlan plan, string? current_branch)
+	public static string command_for(ResetPlan plan,
+	                                 string? current_branch,
+	                                 Gee.Collection<string> existing)
 	{
 		if (plan.is_empty())
 		{
@@ -157,13 +167,17 @@ public class ResetPreview : Object
 			var sha = commit.to_string();
 			var abbrev = sha.length > 7 ? sha.substring(0, 7) : sha;
 
-			if (current_branch != null && branch == current_branch)
+			if (branch == current_branch)
 			{
 				reset_line = "git reset --hard %s".printf(abbrev);
 			}
-			else
+			else if (existing.contains(branch))
 			{
 				lines += "git branch -f %s %s".printf(branch, abbrev);
+			}
+			else
+			{
+				lines += "git branch %s %s".printf(branch, abbrev);
 			}
 		}
 

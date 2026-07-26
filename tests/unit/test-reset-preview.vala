@@ -43,6 +43,19 @@ private static Gee.Map<string, Ggit.OId> tips(string[] pairs) throws Error
 	return map;
 }
 
+/** The set of currently existing branches command_for is told about. */
+private static Gee.Collection<string> existing(string[] names)
+{
+	var set = new Gee.HashSet<string>();
+
+	foreach (var n in names)
+	{
+		set.add(n);
+	}
+
+	return set;
+}
+
 private static bool contains_oid(Ggit.OId[] arr, Ggit.OId want)
 {
 	foreach (var o in arr)
@@ -63,7 +76,7 @@ private static void test_command_non_current_branch_uses_branch_f()
 		var plan = new Gitrlz.ResetPlan();
 		plan.toggle("feature", oid(A));
 
-		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main"),
+		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "feature"})),
 		              CompareOperator.EQ, "git branch -f feature aaaaaaa");
 	}
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
@@ -76,7 +89,7 @@ private static void test_command_current_branch_uses_reset()
 		var plan = new Gitrlz.ResetPlan();
 		plan.toggle("main", oid(A));
 
-		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main"),
+		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main", existing({"main"})),
 		              CompareOperator.EQ, "git reset --hard aaaaaaa");
 	}
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
@@ -90,7 +103,7 @@ private static void test_command_reset_line_comes_last()
 		plan.toggle("feature", oid(A));
 		plan.toggle("main", oid(B));
 
-		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main"),
+		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "feature"})),
 		              CompareOperator.EQ,
 		              "git branch -f feature aaaaaaa; git reset --hard bbbbbbb");
 	}
@@ -107,7 +120,7 @@ private static void test_command_branch_f_lines_are_ordered()
 		plan.toggle("bugfix", oid(C));
 
 		// Detached HEAD: every move is branch -f, in branch-name order.
-		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, null),
+		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, null, existing({"main", "feature", "bugfix"})),
 		              CompareOperator.EQ,
 		              "git branch -f bugfix ccccccc; " +
 		              "git branch -f feature bbbbbbb; " +
@@ -119,8 +132,31 @@ private static void test_command_branch_f_lines_are_ordered()
 private static void test_command_empty_plan_is_empty_string()
 {
 	var plan = new Gitrlz.ResetPlan();
-	assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main"),
+	assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main", existing({"main"})),
 	              CompareOperator.EQ, "");
+}
+
+private static void test_command_absent_branch_is_recreated()
+{
+	// IC-165, FR-166: a plan target that no longer exists is a recreate, so it
+	// gets plain `git branch` (no -f); a present non-current branch keeps
+	// `git branch -f`; the checked-out branch keeps `git reset --hard`. The
+	// branch lines stay in branch-name order, the reset last.
+	try
+	{
+		var plan = new Gitrlz.ResetPlan();
+		plan.toggle("main", oid(A));      // checked-out: reset --hard
+		plan.toggle("feature", oid(B));   // present, not current: branch -f
+		plan.toggle("ghost", oid(C));     // deleted: recreate with branch
+
+		assert_cmpstr(
+			Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "feature"})),
+			CompareOperator.EQ,
+			"git branch -f feature bbbbbbb; " +
+			"git branch ghost ccccccc; " +
+			"git reset --hard aaaaaaa");
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
 
 private static void test_tips_keep_the_tree_and_add_targets()
@@ -202,14 +238,21 @@ private static void test_target_branchless_row_is_not_togglable()
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
 
-private static void test_target_absent_branch_is_not_togglable()
+private static void test_target_absent_branch_is_recoverable()
 {
+	// IC-166: a row naming a real branch no longer among the tips is a valid
+	// recovery target now, in either view, so the plan can recreate it. A null
+	// attribution (a detached position) is still not togglable.
 	try
 	{
 		var t = tips({"feature", A});
-		// A row naming a branch no longer present, in either view.
-		assert_null(Gitrlz.ResetPreview.target_branch_for("all", "ghost", t));
-		assert_null(Gitrlz.ResetPreview.target_branch_for("ghost", null, t));
+
+		assert_cmpstr(Gitrlz.ResetPreview.target_branch_for("all", "ghost", t),
+		              CompareOperator.EQ, "ghost");
+		assert_cmpstr(Gitrlz.ResetPreview.target_branch_for("ghost", null, t),
+		              CompareOperator.EQ, "ghost");
+
+		assert_null(Gitrlz.ResetPreview.target_branch_for("all", null, t));
 	}
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
@@ -223,12 +266,13 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/reset-preview/command-reset-last", test_command_reset_line_comes_last);
 	Test.add_func("/gitrlz/reset-preview/command-ordered", test_command_branch_f_lines_are_ordered);
 	Test.add_func("/gitrlz/reset-preview/command-empty", test_command_empty_plan_is_empty_string);
+	Test.add_func("/gitrlz/reset-preview/command-absent-recreated", test_command_absent_branch_is_recreated);
 	Test.add_func("/gitrlz/reset-preview/tips-keep-tree", test_tips_keep_the_tree_and_add_targets);
 	Test.add_func("/gitrlz/reset-preview/tips-dedupe-target", test_tips_dedupe_a_target_that_is_already_a_tip);
 	Test.add_func("/gitrlz/reset-preview/target-branch-view", test_target_branch_view_uses_the_view);
 	Test.add_func("/gitrlz/reset-preview/target-all-view", test_target_all_view_uses_the_row_branch);
 	Test.add_func("/gitrlz/reset-preview/target-branchless", test_target_branchless_row_is_not_togglable);
-	Test.add_func("/gitrlz/reset-preview/target-absent", test_target_absent_branch_is_not_togglable);
+	Test.add_func("/gitrlz/reset-preview/target-absent", test_target_absent_branch_is_recoverable);
 
 	return Test.run();
 }

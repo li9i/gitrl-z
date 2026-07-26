@@ -260,6 +260,33 @@ private static void test_set_only_replaces_the_whole_plan()
 	}
 }
 
+private static void test_set_only_or_clear_selects_then_deselects()
+{
+	try
+	{
+		var plan = new Gitrlz.ResetPlan();
+
+		plan.toggle("feature", oid(A));
+		plan.toggle("main", oid(B));
+		assert_cmpint(plan.size, CompareOperator.EQ, 2);
+
+		// The HEAD view's plain click: the row becomes the sole selection,
+		// dropping the others, exactly like set_only.
+		plan.set_only_or_clear("main", oid(C));
+		assert_cmpint(plan.size, CompareOperator.EQ, 1);
+		assert_true(plan.contains("main", oid(C)));
+
+		// Clicking the same row again clears it: the plan empties. This is the
+		// deselect that set_only alone does not do.
+		plan.set_only_or_clear("main", oid(C));
+		assert_cmpint(plan.size, CompareOperator.EQ, 0);
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 public static int main(string[] args)
 {
 	Test.init(ref args);
@@ -274,6 +301,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/reset-plan/set-target-keeps-others", test_set_target_keeps_other_branches);
 	Test.add_func("/gitrlz/reset-plan/set-target-same-keeps", test_set_target_same_row_keeps_it);
 	Test.add_func("/gitrlz/reset-plan/set-only-replaces-all", test_set_only_replaces_the_whole_plan);
+	Test.add_func("/gitrlz/reset-plan/set-only-or-clear", test_set_only_or_clear_selects_then_deselects);
 
 	return Test.run();
 }

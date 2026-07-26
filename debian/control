@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: alexandros filotheou <alexandros.filotheou@gmail.com>
 Build-Depends: debhelper-compat (= 13),
                desktop-file-utils,
+               git,
                gsettings-desktop-schemas-dev,
                libdazzle-1.0-dev,
                libgee-0.8-dev,

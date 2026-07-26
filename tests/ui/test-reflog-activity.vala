@@ -119,6 +119,35 @@ private static void test_refs_panel_contents()
 	}
 }
 
+private static void test_checked_out_branch_is_marked()
+{
+	// The sidebar marks the branch HEAD is on, and nothing when detached.
+	try
+	{
+		var repo = braided_repo();          // ends on main
+		var paned = activity_for(repo);
+
+		assert_true("checked out" in paned.ref_label("main"));
+		assert_false("checked out" in paned.ref_label("feature"));
+
+		paned.destroy();
+
+		// Detached: no branch carries the mark.
+		repo.checkout("HEAD~1");
+		var detached = activity_for(repo);
+
+		assert_false("checked out" in detached.ref_label("main"));
+		assert_false("checked out" in detached.ref_label("feature"));
+
+		detached.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_stash_entry_appears_only_with_a_stash()
 {
 	try
@@ -778,6 +807,64 @@ private static void test_untracked_files_do_not_warn()
 	}
 }
 
+private static void test_mid_operation_offers_the_abort()
+{
+	// FR-165, IC-164: while a git operation is in progress there is nothing to
+	// reset until it is finished or aborted, so the preview offers the abort
+	// command and plans nothing, even where a reset would otherwise appear.
+	try
+	{
+		var repo = braided_repo();
+		repo.begin_operation("MERGE_HEAD");
+
+		var paned = activity_for(repo);
+
+		// On open, mid-merge: the abort command and a note that names it.
+		assert_cmpstr(paned.command, CompareOperator.EQ, "git merge --abort");
+		assert_cmpstr(paned.preview_state, CompareOperator.EQ, "placeholder");
+		assert_true("merge" in paned.preview_placeholder);
+
+		// Clicking a row plans nothing and keeps offering the abort, not a reset.
+		assert_true(paned.toggle_entry(0));
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 0);
+		assert_cmpstr(paned.command, CompareOperator.EQ, "git merge --abort");
+		assert_false(paned.command.contains("reset --hard"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_mid_rebase_offers_abort_not_checkout()
+{
+	// The bug this fixes: a rebase detaches HEAD, so without giving the
+	// operation precedence over the detached-HEAD case the preview offered
+	// `git checkout -` in the middle of a rebase. It must offer the abort.
+	try
+	{
+		var repo = braided_repo();
+		repo.checkout("HEAD~1");          // detach, as a rebase does
+		repo.begin_operation("rebase");   // and mark a rebase in progress
+
+		var paned = activity_for(repo);
+
+		assert_cmpstr(paned.command, CompareOperator.EQ, "git rebase --abort");
+		assert_false(paned.command.contains("checkout -"));
+		assert_true("rebase" in paned.preview_placeholder);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_reflog_caption_names_the_log()
 {
 	// The refs panel says which row is selected; it does not say that the
@@ -846,7 +933,7 @@ private static void test_graph_caption_drops_the_name_for_many_branches()
 
 		assert_cmpint(paned.plan_size, CompareOperator.EQ, 2);
 		assert_false("moved" in paned.graph_caption);
-		assert_true("after the command above" in paned.graph_caption);
+		assert_true("after execution of the command above" in paned.graph_caption);
 
 		paned.destroy();
 		repo.remove();
@@ -957,6 +1044,70 @@ private static void test_branchless_row_is_not_togglable()
 		assert_cmpstr(paned.preview_state, CompareOperator.EQ, "placeholder");
 		assert_cmpstr(paned.preview_placeholder, CompareOperator.EQ,
 		              "No branch to move for this entry");
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_deleted_branch_offers_recreate()
+{
+	// FR-166, IC-165, IC-166: an entry attributed to a branch that no longer
+	// exists offers to recreate it with `git branch <name> <sha>` (no -f),
+	// draws the target commit with the branch's pill so it can be confirmed,
+	// and raises no warning, because a recreate moves no ref and touches no
+	// working tree.
+	try
+	{
+		var repo = Repo.create();
+		repo.commit("first");
+		repo.branch("recover");
+		repo.checkout("recover");
+		var lost = repo.commit("work to recover", "recover.txt");
+		repo.checkout("main");
+		repo.delete_branch("recover");
+
+		var paned = activity_for(repo);
+
+		// HEAD's reflog is where the deleted branch's entry is attributed to it
+		// (P-FR-16); the `all` view reads that log.
+		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+
+		var index = -1;
+
+		for (var i = 0; i < paned.list.entries.size; i++)
+		{
+			if (paned.list.branch_for_index(i) == "recover")
+			{
+				index = i;
+				break;
+			}
+		}
+
+		assert_cmpint(index, CompareOperator.GE, 0);
+		assert_true(paned.toggle_entry(index));
+
+		// The recreate command, not a move: plain `git branch recover <sha>`
+		// with no -f, because the branch no longer exists.
+		assert_true(paned.command.contains("git branch recover "));
+		assert_false(paned.command.contains("git branch -f recover "));
+
+		// The target commit is drawn, so the operator can confirm the branch
+		// would come back at the right place.
+		assert_true(includes_oid(paned.included_tips, lost));
+
+		// The recreated branch's pill is drawn at that commit, even though no
+		// live ref reaches it (a synthesised label).
+		assert_true(has_label(paned.preview_labels_for(new Ggit.OId.from_string(lost)), "recover"));
+
+		// A recreate is not a move: nothing warns, and the caption does not say
+		// the branch was moved.
+		assert_false(paned.warning_visible);
+		assert_false("moved" in paned.graph_caption);
 
 		paned.destroy();
 		repo.remove();
@@ -1272,6 +1423,92 @@ private static void test_head_view_plain_select_replaces_the_plan()
 	}
 }
 
+private static void test_head_view_click_deselects_the_same_row()
+{
+	// FR-148: in the HEAD view a plain click makes a row the sole selection,
+	// and clicking that same row again clears it. This is what a mouse click
+	// does (click_entry), unlike arrow travel, which tracks the cursor and
+	// never deselects.
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		// First click selects the row: its branch enters the plan.
+		assert_true(paned.click_entry(0));
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
+
+		// A second click on the same row deselects it: the plan empties and the
+		// command clears with it.
+		assert_true(paned.click_entry(0));
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 0);
+		assert_cmpstr(paned.command, CompareOperator.EQ, "");
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_head_view_arrow_travel_never_deselects()
+{
+	// FR-148: arrow travel (select_entry) is not a click. Landing on the same
+	// row twice keeps it selected, where a second click would clear it.
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		assert_true(paned.select_entry(0));
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
+
+		assert_true(paned.select_entry(0));
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_detached_head_offers_the_way_back()
+{
+	// FR-148 / Option 3: with HEAD detached there is no branch to reset, so the
+	// preview offers the way back on to a branch and plans nothing.
+	try
+	{
+		var repo = braided_repo();
+		repo.checkout("HEAD~1");   // detach HEAD onto an earlier commit
+
+		var paned = activity_for(repo);
+
+		// On open: the command is the reattach, the preview is the note (not a
+		// graph), and it says why.
+		assert_cmpstr(paned.command, CompareOperator.EQ, "git checkout -");
+		assert_cmpstr(paned.preview_state, CompareOperator.EQ, "placeholder");
+		assert_true("detached" in paned.preview_placeholder);
+
+		// Clicking an entry plans nothing: reset is off until you are back on a
+		// branch, and the reattach command stays put.
+		assert_true(paned.click_entry(0));
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 0);
+		assert_cmpstr(paned.command, CompareOperator.EQ, "git checkout -");
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 public static int main(string[] args)
 {
 	Environment.set_variable("GSETTINGS_BACKEND", "memory", true);
@@ -1308,6 +1545,7 @@ public static int main(string[] args)
 	}
 
 	Test.add_func("/gitrlz/activity/refs-panel-contents", test_refs_panel_contents);
+	Test.add_func("/gitrlz/activity/checked-out-branch-marked", test_checked_out_branch_is_marked);
 	Test.add_func("/gitrlz/activity/stash-entry", test_stash_entry_appears_only_with_a_stash);
 	Test.add_func("/gitrlz/activity/selecting-a-ref-reloads", test_selecting_a_ref_reloads_the_list);
 	Test.add_func("/gitrlz/activity/empty-plan-shows-tree", test_empty_plan_shows_the_repository_tree);
@@ -1318,6 +1556,9 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/keyboard-select-keeps-others", test_keyboard_select_keeps_other_branches);
 	Test.add_func("/gitrlz/activity/keyboard-select-never-deselects", test_keyboard_select_never_deselects);
 	Test.add_func("/gitrlz/activity/head-view-plain-select-replaces", test_head_view_plain_select_replaces_the_plan);
+	Test.add_func("/gitrlz/activity/head-view-click-deselects", test_head_view_click_deselects_the_same_row);
+	Test.add_func("/gitrlz/activity/head-view-arrow-never-deselects", test_head_view_arrow_travel_never_deselects);
+	Test.add_func("/gitrlz/activity/detached-head-offers-way-back", test_detached_head_offers_the_way_back);
 	Test.add_func("/gitrlz/activity/preview-keeps-tree-moves-branch", test_preview_keeps_the_tree_and_moves_the_branch);
 	Test.add_func("/gitrlz/activity/preview-writes-nothing", test_preview_writes_nothing);
 	Test.add_func("/gitrlz/activity/empty-reflog-placeholder", test_empty_reflog_shows_placeholder);
@@ -1330,12 +1571,15 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/copied-state", test_copied_state_follows_the_clipboard);
 	Test.add_func("/gitrlz/activity/uncommitted-warning", test_uncommitted_warning);
 	Test.add_func("/gitrlz/activity/untracked-no-warning", test_untracked_files_do_not_warn);
+	Test.add_func("/gitrlz/activity/mid-operation-abort", test_mid_operation_offers_the_abort);
+	Test.add_func("/gitrlz/activity/mid-rebase-abort-not-checkout", test_mid_rebase_offers_abort_not_checkout);
 	Test.add_func("/gitrlz/activity/reflog-caption", test_reflog_caption_names_the_log);
 	Test.add_func("/gitrlz/activity/graph-caption-single", test_graph_caption_names_a_single_moved_branch);
 	Test.add_func("/gitrlz/activity/graph-caption-many", test_graph_caption_drops_the_name_for_many_branches);
 	Test.add_func("/gitrlz/activity/graph-caption-hidden", test_graph_caption_hidden_without_a_graph);
 	Test.add_func("/gitrlz/activity/stash-offers-apply", test_stash_offers_apply_not_reset);
 	Test.add_func("/gitrlz/activity/branchless-not-togglable", test_branchless_row_is_not_togglable);
+	Test.add_func("/gitrlz/activity/deleted-branch-recreate", test_deleted_branch_offers_recreate);
 	Test.add_func("/gitrlz/activity/planned-row-tinted", test_planned_row_is_tinted_and_survives_a_ref_switch);
 	Test.add_func("/gitrlz/activity/refs-bold-planned", test_refs_panel_bolds_a_planned_branch);
 	Test.add_func("/gitrlz/activity/graph-keeps-scroll", test_graph_keeps_its_scroll_across_a_toggle);
