@@ -1,7 +1,9 @@
 # Build environment for gitrl-z.
 #
-# Matches the target platform exactly: Ubuntu 24.04 noble, the same series
-# that ships gitg 44 (see vendor/PROVENANCE).
+# Defaults to Ubuntu 24.04 noble, the series that ships gitg 44 (see
+# vendor/PROVENANCE). Override with --build-arg UBUNTU=26.04 to build against
+# another series; build-deb.sh then produces that series' .deb. The visual
+# image (Dockerfile.visual) builds FROM the default.
 #
 # Source is NOT copied in. It arrives as a bind mount at /src, so the tree
 # can be edited on the host and built here (spec NFR-10). That also means
@@ -9,7 +11,8 @@
 # that is not listed below will fail here even if it happens to be
 # installed on the developer's machine.
 
-FROM ubuntu:24.04
+ARG UBUNTU=24.04
+FROM ubuntu:${UBUNTU}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -34,7 +37,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         desktop-file-utils \
         gsettings-desktop-schemas-dev \
-        libdazzle-1.0-dev \
         libgee-0.8-dev \
         libgirepository1.0-dev \
         libgit2-glib-1.0-dev \

@@ -21,8 +21,30 @@
 
 set -eu
 
+# Optional: build another series' .deb. Empty means the default noble build.
+# The series MUST match the container the build runs in, because a .deb links
+# whatever libraries are present at build time.
+#
+#   docker build --build-arg UBUNTU=26.04 -t gitrlz-build:26.04 .
+#   docker run ... gitrlz-build:26.04 ./docker/build-deb.sh resolute '~ubuntu26.04.1'
+series=${1:-}
+suffix=${2:-}
+
 src=/src
-version=$(dpkg-parsechangelog -l "$src/debian/changelog" -S Version | sed 's/-[^-]*$//')
+
+# Refuse a series that is not this container's own, rather than emit a
+# mislabelled package built against the wrong libraries.
+container_series=$(. /etc/os-release; echo "${VERSION_CODENAME:-}")
+target_series=${series:-noble}
+if [ "$container_series" != "$target_series" ]; then
+    echo "build-deb.sh: asked to build for '$target_series' but this container is '$container_series'." >&2
+    echo "A .deb links this container's libraries, so the series must match." >&2
+    echo "Build the image on that series first: docker build --build-arg UBUNTU=<ver> -t gitrlz-build:<ver> ." >&2
+    exit 1
+fi
+
+full=$(dpkg-parsechangelog -l "$src/debian/changelog" -S Version)
+version=${full%-*}
 work=/tmp/gitrlz-build-deb
 pkgdir="$work/gitrl-z-$version"
 
@@ -33,6 +55,14 @@ mkdir -p "$pkgdir"
 # vendored upstream working copy (reproducible from vendor/PROVENANCE).
 tar --exclude=_build --exclude=.git --exclude=vendor/upstream \
     -C "$src" -cf - . | tar -C "$pkgdir" -xf -
+
+if [ -n "$series" ] || [ -n "$suffix" ]; then
+    # Retarget the top changelog entry (version suffix and series) in the build
+    # copy only, so the .deb is named and versioned for this series. Upstream
+    # (hence the orig) is untouched.
+    sed -i "1s|.*|gitrl-z ($full$suffix) $target_series; urgency=medium|" \
+        "$pkgdir/debian/changelog"
+fi
 
 # The orig tarball is the tree without debian/.
 tar --exclude=./debian -C "$pkgdir" -czf "$work/gitrl-z_$version.orig.tar.gz" .

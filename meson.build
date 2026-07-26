@@ -1,6 +1,6 @@
 project(
   'gitrl-z', ['c', 'vala'],
-  version: '0.2.0',
+  version: '0.2.1',
   license: 'GPL-2.0-or-later',
   default_options: 'buildtype=debugoptimized',
   # gitg targets 0.50; we need 0.59 for gnome.post_install's
@@ -62,7 +62,6 @@ gtk_dep = dependency('gtk+-3.0', version: '>= 3.20.0')
 gdk_dep = dependency('gdk-3.0')
 hdy_dep = dependency('libhandy-1', version: '>= 1.5.0')
 libgit2_glib_dep = dependency('libgit2-glib-1.0', version: '>= 1.1.0')
-libdazzle_dep = dependency('libdazzle-1.0')
 gsettings_desktop_schemas_dep = dependency('gsettings-desktop-schemas')
 libm_dep = cc.find_library('m', required: false)
 

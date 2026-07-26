@@ -64,6 +64,11 @@ vendor_gitg_sources = files(
 # C support used by gitg-utils.vala to resolve the user's home directory.
 vendor_gitg_sources += files('libgitg/gitg-platform-support.c')
 
+# gitrl-z compatibility shim: reimplements the single libdazzle function the
+# vendored font manager calls, so libgitg builds without libdazzle (dropped in
+# Ubuntu 26.04). Not gitg source, kept out of the libgitg/ file list above.
+vendor_gitg_sources += files('gitrlz-dazzle-compat.vala')
+
 vendor_gitg_resources = gnome.compile_resources(
   'gitrlz-vendor-resources',
   'libgitg/resources/resources.xml',
@@ -78,7 +83,6 @@ vendor_gitg_deps = [
   gtk_dep,
   gdk_dep,
   libgit2_glib_dep,
-  libdazzle_dep,
   gsettings_desktop_schemas_dep,
   libm_dep,
 ]
