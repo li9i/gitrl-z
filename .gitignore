@@ -21,11 +21,6 @@ debian/debhelper-build-stamp
 *.buildinfo
 *.changes
 
-# Flatpak build products (see flatpak/README.md)
-.flatpak-builder/
-/build-dir/
-/repo/
-
 # AppImage build product (see scripts/build-appimage.sh)
 *.AppImage
 
