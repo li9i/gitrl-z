@@ -61,20 +61,22 @@ git clone https://github.com/li9i/gitrl-z.git
 cd gitrl-z
 ```
 
-The AppImage, portable and running on most distributions:
+### AppImage
 
 ```bash
 ./scripts/build-appimage.sh
 # -> gitrl-z-<version>-x86_64.AppImage in the repository root
 ```
 
-A `.deb`, built inside a container that matches the target Ubuntu so it links that release's libraries (you need Docker):
+### `.deb` package
+
+Built inside a container that matches the target Ubuntu so it links that release's libraries (you need Docker):
 
 ```bash
 # Ubuntu 24.04
-docker build -t gitrlz-build .
+docker build --build-arg UBUNTU=24.04 -t gitrlz-build:24.04 .
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
-    -v "$PWD:/src" -w /src gitrlz-build ./docker/build-deb.sh
+    -v "$PWD:/src" -w /src gitrlz-build:24.04 ./docker/build-deb.sh noble '~ubuntu24.04.1'
 
 # Ubuntu 26.04
 docker build --build-arg UBUNTU=26.04 -t gitrlz-build:26.04 .
