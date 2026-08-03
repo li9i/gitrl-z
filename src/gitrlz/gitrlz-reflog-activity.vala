@@ -462,6 +462,15 @@ public class ReflogPaned : Gtk.Paned
 		if (clipboard != null)
 		{
 			clipboard.set_text(d_command, -1);
+
+			// X11 holds a selection in the process that owns it. Thus the
+			// command would go away with the window, and the paste that the
+			// user does in a terminal after that would give nothing. These two
+			// calls give the text to the clipboard manager of the session,
+			// which keeps it after gitrl-z stops. A session with no clipboard
+			// manager can keep nothing, and there both calls do nothing.
+			clipboard.set_can_store(null);
+			clipboard.store();
 		}
 
 		d_copied_command = d_command;

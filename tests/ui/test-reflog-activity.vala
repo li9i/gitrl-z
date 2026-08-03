@@ -742,6 +742,66 @@ private static void test_copied_state_follows_the_clipboard()
 	}
 }
 
+/**
+ * The copied command must stay after gitrl-z closes.
+ *
+ * X11 holds a selection in the process that owns it. A command that gitrl-z
+ * only puts on the clipboard goes away with the window, and the paste in the
+ * terminal that follows gives nothing. The clipboard manager of the session
+ * is the way to keep it: the application says that the content is storable,
+ * and asks the manager to take a copy.
+ *
+ * This test is the manager. It holds the CLIPBOARD_MANAGER selection, and it
+ * sees the SAVE_TARGETS request that the copy must send.
+ */
+private static void test_copy_offers_the_command_to_the_clipboard_manager()
+{
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		assert_true(paned.toggle_entry(0));
+		assert_cmpstr(paned.command, CompareOperator.NE, "");
+
+		// An empty window that holds CLIPBOARD_MANAGER is a clipboard manager,
+		// as much as GTK needs. Without an owner of that selection, GTK finds
+		// no manager on the display and keeps nothing.
+		var manager = new Gtk.Window(Gtk.WindowType.TOPLEVEL);
+		manager.realize();
+
+		var selection = Gdk.Atom.intern("CLIPBOARD_MANAGER", false);
+		var save_targets = Gdk.Atom.intern("SAVE_TARGETS", false);
+		var asked = false;
+
+		Gtk.selection_add_target(manager, selection, save_targets, 0);
+		assert_true(Gtk.selection_owner_set(manager, selection, Gdk.CURRENT_TIME));
+
+		manager.selection_request_event.connect((widget, ev) => {
+			if (ev.selection == selection && ev.target == save_targets)
+			{
+				asked = true;
+			}
+
+			return false;
+		});
+
+		paned.copy_command();
+
+		assert_true(asked);
+
+		Gtk.selection_owner_set(null, selection, Gdk.CURRENT_TIME);
+
+		manager.destroy();
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_uncommitted_warning()
 {
 	// FR-140. A hard reset destroys uncommitted work, and that is the one
@@ -1569,6 +1629,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/working-tree-ignored", test_working_tree_edits_are_ignored);
 	Test.add_func("/gitrlz/activity/search-filters", test_search_filters_the_list);
 	Test.add_func("/gitrlz/activity/copied-state", test_copied_state_follows_the_clipboard);
+	Test.add_func("/gitrlz/activity/copy-reaches-clipboard-manager", test_copy_offers_the_command_to_the_clipboard_manager);
 	Test.add_func("/gitrlz/activity/uncommitted-warning", test_uncommitted_warning);
 	Test.add_func("/gitrlz/activity/untracked-no-warning", test_untracked_files_do_not_warn);
 	Test.add_func("/gitrlz/activity/mid-operation-abort", test_mid_operation_offers_the_abort);
