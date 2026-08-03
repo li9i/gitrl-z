@@ -33,6 +33,14 @@ sudo apt-get install gitrl-z
 
 The package is `gitrl-z`. The command is `gitrlz`.
 
+### `.deb` package
+
+Packages for Ubuntu 24.04 and 26.04 are on the [releases page](https://github.com/li9i/gitrl-z/releases). Download the one for your release, then install it with `apt`, so that you also get its dependencies:
+
+```bash
+sudo apt-get install ./gitrl-z_*_amd64.deb
+```
+
 ### AppImage
 
 Download the AppImage from the [releases page](https://github.com/li9i/gitrl-z/releases). It is one file, and it is not necessary to install it. Make it executable, then run it:
