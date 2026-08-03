@@ -27,9 +27,9 @@ public int main(string[] args)
 	Intl.bind_textdomain_codeset(Config.GETTEXT_PACKAGE, "UTF-8");
 	Intl.textdomain(Config.GETTEXT_PACKAGE);
 
-	// Nothing here may require a display. Application.local_command_line
-	// handles --version, --help and the not-a-repository error before
-	// GApplication opens one (spec FR-104).
+	// No code here can need a display. Application.local_command_line
+	// processes --version, --help and the not-a-repository error before
+	// GApplication opens a display (spec FR-104).
 	var app = new Gitrlz.Application();
 
 	return app.run(args);

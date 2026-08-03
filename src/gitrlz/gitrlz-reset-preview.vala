@@ -20,40 +20,40 @@ namespace Gitrlz
 /**
  * The reset preview (spec FR-148 to FR-150, P-FR-18).
  *
- * Turns a reset plan into the two things the bottom pane shows: the command
- * that would produce it, and the tip set the graph is drawn over. Both are
- * pure and in memory only. No ref is moved, nothing is written, and that is
- * the whole product: gitrl-z shows the command and leaves running it to you.
+ * Changes a reset plan into the two items that the bottom pane shows: the
+ * command that would give that plan, and the tip set for the graph. The two
+ * are pure and in memory only. The code moves no ref and writes nothing.
+ * gitrl-z shows the command, and you run it.
  *
- * The graph itself is drawn by gitg: preview_tips() hands its set to
- * Gitg.CommitModel.set_include(), and gitg's own lane engine and cell
- * renderers do the rest (IC-106). Where a planned branch's label is drawn is
- * decided separately, by the activity's own label override, so the graph
- * shows the whole tree while a branch's pill sits where a reset would land.
+ * gitg draws the graph. preview_tips() gives its set to
+ * Gitg.CommitModel.set_include(), and the lane engine and cell renderers of
+ * gitg do the remainder (IC-106). The label override of the activity decides
+ * the position of the label of a planned branch. Thus the graph shows the full
+ * tree, and the pill of a branch is at the position where a reset would put
+ * it.
  */
 public class ResetPreview : Object
 {
 	/**
-	 * The branch a clicked row would toggle into the plan, or null when the
-	 * row is not togglable (FR-148).
+	 * The branch that a clicked row would toggle into the plan, or null if the
+	 * row does not toggle (FR-148).
 	 *
 	 * The branch is:
 	 *
-	 *  - in a branch view, the branch whose reflog is shown;
-	 *  - in the `all` view, the branch the row itself is attributed to
-	 *    (P-FR-16).
+	 *  - in a branch view, the branch of the reflog that is shown.
+	 *  - in the `all` view, the branch of the row itself (P-FR-16).
 	 *
-	 * A row with no attributed branch returns null: a detached-HEAD position
-	 * has no branch to move, and the `stash` view never reaches here (it keeps
-	 * FR-142's own preview). The attribution is already null for a detached or
-	 * bare-hash position, never a hash, so it is either null or a real branch
-	 * name.
+	 * A row with no branch returns null. A detached-HEAD position has no
+	 * branch to move, and the `stash` view does not come here, because it
+	 * keeps the preview of FR-142. The attribution is already null for a
+	 * detached position or a bare-hash position, and is never a hash. Thus it
+	 * is null or a real branch name.
 	 *
-	 * A real branch name that is no longer among the current tips is returned
-	 * all the same (IC-166): it names a deleted branch, and the plan can
-	 * recreate it at the row's commit with `git branch <name> <sha>`. The
-	 * `tips` map is kept in the signature so callers need not change, though
-	 * membership no longer gates the answer.
+	 * The method returns a real branch name that is not in the current tips
+	 * (IC-166). That name is a deleted branch, and the plan can make it again
+	 * at the commit of the row with `git branch <name> <sha>`. The `tips` map
+	 * stays in the signature, so that callers do not change. But membership no
+	 * longer controls the result.
 	 */
 	public static string? target_branch_for(string view,
 	                                        string? row_branch,
@@ -63,19 +63,21 @@ public class ResetPreview : Object
 	}
 
 	/**
-	 * The tip set the preview graph is drawn over (FR-150, P-FR-18).
+	 * The tip set for the preview graph (FR-150, P-FR-18).
 	 *
-	 * The whole current tree stays visible: every real branch tip is kept, so
-	 * commits a reset would abandon are still drawn. They stay recoverable
-	 * from the reflog, which is the point of gitrl-z, so hiding them would
-	 * hide the very thing it exists to show. Every planned target is added
-	 * too, so a commit a reset would land on is present even when no current
-	 * ref reaches it any more (an abandoned commit pulled back from the
-	 * reflog). The tip set only decides which commits are drawn; a planned
-	 * branch's label is moved onto its target by the activity, not here.
+	 * The full current tree stays visible. The method keeps each real branch
+	 * tip, thus the graph still draws the commits that a reset would abandon.
+	 * The reflog can recover those commits, which is the purpose of gitrl-z.
+	 * If the graph hid them, it would hide its own subject. The method also
+	 * adds each planned target. Thus a commit that a reset would move to is
+	 * present, also when no current ref reaches it. An example is an abandoned
+	 * commit that comes back from the reflog. The tip set decides only which
+	 * commits the graph draws. The activity moves the label of a planned
+	 * branch onto its target, and this method does not.
 	 *
-	 * Deduplicated by commit, so two branches sharing a tip, or a target that
-	 * is already a tip, do not feed the walker the same commit twice.
+	 * The method removes duplicates by commit. Thus two branches with the same
+	 * tip, or a target that is already a tip, do not give the walker the same
+	 * commit two times.
 	 */
 	public static Ggit.OId[] preview_tips(Gee.Map<string, Ggit.OId> tips,
 	                                      ResetPlan plan)
@@ -103,7 +105,7 @@ public class ResetPreview : Object
 		return result;
 	}
 
-	/** Whether `ids` already holds `id`, compared by commit identity. */
+	/** Says if `ids` already holds `id`, compared by commit identity. */
 	private static bool contains_oid(Ggit.OId[] ids, Ggit.OId id)
 	{
 		foreach (var existing in ids)
@@ -118,30 +120,32 @@ public class ResetPreview : Object
 	}
 
 	/**
-	 * The command that would produce the whole plan (FR-149, IC-165).
+	 * The command that would give the full plan (FR-149, IC-165).
 	 *
-	 * One rule per branch, told apart by what the branch is now, using the set
-	 * of branches that currently exist (`existing`, the tips key set):
+	 * There is one rule for each branch. The rule depends on the current state
+	 * of the branch, and uses the set of branches that exist now (`existing`,
+	 * the key set of the tips):
 	 *
-	 *  - the checked-out branch is moved with `git reset --hard`, because a
-	 *    checked-out ref cannot be moved by `git branch -f`, and this is the
-	 *    one move that updates the working tree;
-	 *  - a branch that still exists but is not the checked-out one is moved
-	 *    with `git branch -f`, which repoints the ref without touching the
-	 *    working tree and leaves a reflog entry, so the move stays recoverable
-	 *    inside gitrl-z;
-	 *  - a branch that no longer exists is recreated with plain `git branch`
-	 *    (no `-f`), which brings a deleted branch back at the row's commit
+	 *  - `git reset --hard` moves the checked-out branch. `git branch -f`
+	 *    cannot move a checked-out ref, and this is the one move that updates
+	 *    the working tree.
+	 *  - `git branch -f` moves a branch that exists and is not the checked-out
+	 *    branch. It points the ref to a different commit, does not change the
+	 *    working tree, and writes a reflog entry. Thus gitrl-z can recover the
+	 *    move.
+	 *  - plain `git branch` (with no `-f`) makes a branch that no longer
+	 *    exists. This returns a deleted branch at the commit of the row
 	 *    (FR-166).
 	 *
-	 * The branch lines come first, in the plan's branch-name order; the single
-	 * `git reset --hard`, if any, comes last, so the working-tree change is the
-	 * final step. Joined with `; ` on one line. An empty plan is the empty
-	 * string. A null `current_branch` (detached HEAD) means no line is a reset:
-	 * every move is a `git branch -f` or a recreate, and nothing touches the
-	 * working tree. The activity does not reach this with a detached HEAD in
-	 * practice (it offers a way back on to a branch instead), but the rule
-	 * holds regardless.
+	 * The branch lines come first, in the branch-name order of the plan. The
+	 * one `git reset --hard`, if there is one, comes last. Thus the change to
+	 * the working tree is the last step. The method joins the lines with `; `
+	 * on one line. An empty plan gives an empty string. A null
+	 * `current_branch` (detached HEAD) means that no line is a reset. Each
+	 * move is then a `git branch -f` or a branch creation, and nothing changes
+	 * the working tree. In practice the activity does not come here with a
+	 * detached HEAD, because it offers a way back to a branch. But the rule is
+	 * still correct.
 	 */
 	public static string command_for(ResetPlan plan,
 	                                 string? current_branch,

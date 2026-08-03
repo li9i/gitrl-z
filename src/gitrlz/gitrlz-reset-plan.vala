@@ -20,19 +20,20 @@ namespace Gitrlz
 /**
  * A multi-branch reset plan (spec FR-148, IC 4.1).
  *
- * Holds at most one target commit per local branch: the commit that branch
- * would be reset to. The plan is what the bottom pane draws and what the
- * banner's command is built from, so a plan of one behaves exactly like a
- * single selected entry used to, and a plan of many is the same idea repeated.
+ * Holds a maximum of one target commit for each local branch. That commit is
+ * the commit that a reset would move the branch to. The bottom pane draws the
+ * plan, and the command of the banner comes from it. Thus a plan of one branch
+ * operates as a single selected entry did before, and a plan of many branches
+ * repeats that behaviour.
  *
- * Keyed by branch, not by list position. A reflog row is a position and every
- * entry shifts down as new ones arrive; a branch and a commit are an identity
- * that survives a reload. That is why the mark on a planned row (FR-151) and
- * the plan's survival across a reload (FR-152) are both expressed here in
- * terms of branch and commit rather than of which row was clicked.
+ * The key is the branch, and not the list position. A reflog row is a
+ * position, and each entry moves down when new entries arrive. A branch and a
+ * commit are an identity that stays after a reload. Thus the mark on a planned
+ * row (FR-151) and the plan after a reload (FR-152) both use the branch and
+ * the commit, and not the row that the user clicked.
  *
- * Pure: no widget, no repository. It can be exercised in full without a GTK
- * main loop, which is where spec §6.1 puts its tests.
+ * This class is pure: it has no widget and no repository. A test can use all
+ * of it with no GTK main loop, which is where spec §6.1 puts its tests.
  */
 public class ResetPlan : Object
 {
@@ -49,17 +50,18 @@ public class ResetPlan : Object
 		get { return d_targets.size; }
 	}
 
-	/** Whether the plan moves nothing. */
+	/** Says if the plan moves no branch. */
 	public bool is_empty()
 	{
 		return d_targets.size == 0;
 	}
 
 	/**
-	 * The planned branches, in ascending name order.
+	 * The planned branches, in increasing name order.
 	 *
-	 * Ordered so the command they build (FR-149) is a stable, diffable string
-	 * rather than one that reshuffles with the hash map's iteration order.
+	 * The order is fixed, thus the command that they build (FR-149) is a
+	 * stable string. Without the order, the string would change with the
+	 * iteration order of the hash map.
 	 */
 	public Gee.List<string> branches()
 	{
@@ -70,18 +72,18 @@ public class ResetPlan : Object
 		return names;
 	}
 
-	/** The commit a branch is planned to move to, or null when it is absent. */
+	/** The commit that the plan moves a branch to, or null if it is absent. */
 	public Ggit.OId? target_for(string branch)
 	{
 		return d_targets.has_key(branch) ? d_targets[branch] : null;
 	}
 
 	/**
-	 * Whether the plan holds `branch` at exactly `commit` (FR-151, FR-148).
+	 * Says if the plan holds `branch` at `commit` (FR-151, FR-148).
 	 *
-	 * This is the question a reflog row asks to know whether it is the row that
-	 * put its branch in the plan: same branch at a different commit is not a
-	 * match, because only one row per branch is the planned one.
+	 * A reflog row uses this method to know if it is the row that put its
+	 * branch in the plan. The same branch at a different commit is not a
+	 * match, because only one row for each branch is the planned row.
 	 */
 	public bool contains(string branch, Ggit.OId commit)
 	{
@@ -89,22 +91,22 @@ public class ResetPlan : Object
 	}
 
 	/**
-	 * Toggle a branch's place in the plan (FR-148).
+	 * Toggles the position of a branch in the plan (FR-148).
 	 *
-	 * The three-way rule that drives the whole interaction. Given a branch and
+	 * This is the three-way rule for the full interaction. For a branch and
 	 * the commit of the clicked row:
 	 *
-	 *  - the branch is not in the plan  -> add it, targeting `commit`;
-	 *  - the branch is in the plan at a *different* commit -> move its target
-	 *    to `commit` (a branch has one position, so a second choice replaces
-	 *    the first, it does not add a second entry);
-	 *  - the branch is in the plan at *this* commit -> remove it (clicking the
-	 *    same row again deselects it).
+	 *  - if the branch is not in the plan, add it with the target `commit`.
+	 *  - if the branch is in the plan at a *different* commit, move its target
+	 *    to `commit`. A branch has one position, thus a second choice replaces
+	 *    the first and does not add a second entry.
+	 *  - if the branch is in the plan at *this* commit, remove it. A second
+	 *    click on the same row deselects it.
 	 *
-	 * The map is `d_targets`, from branch name to `Ggit.OId`. `contains(branch,
-	 * commit)` above already answers the third case; `Gee.HashMap` has
-	 * `has_key`, `set(key, value)` and `unset(key)`; two ids compare with
-	 * `a.equal(b)`.
+	 * The map is `d_targets`, from branch name to `Ggit.OId`.
+	 * `contains(branch, commit)` above gives the third condition.
+	 * `Gee.HashMap` has `has_key`, `set(key, value)` and `unset(key)`. Two ids
+	 * compare with `a.equal(b)`.
 	 */
 	public void toggle(string branch, Ggit.OId commit)
 	{
@@ -119,13 +121,14 @@ public class ResetPlan : Object
 	}
 
 	/**
-	 * Set a branch's target, replacing its own previous one and keeping others.
+	 * Sets the target of a branch. Replaces the previous target of that branch,
+	 * and keeps the other branches.
 	 *
-	 * The keyboard select uses this (FR-148): arrow travel updates the focused
-	 * view's branch to the landed row, exactly as a mouse click on that row
-	 * would, while branches chosen in other views stay in the plan. Unlike
-	 * toggle it never removes, so landing again on a branch's own planned row
-	 * leaves it planned rather than deselecting it.
+	 * The keyboard selection uses this method (FR-148). Arrow movement changes
+	 * the branch of the focused view to the new row, as a mouse click on that
+	 * row does. Branches selected in other views stay in the plan. This method
+	 * does not remove a branch, and toggle does. Thus a second arrival on the
+	 * planned row of a branch keeps it planned, and does not deselect it.
 	 */
 	public void set_target(string branch, Ggit.OId commit)
 	{
@@ -133,13 +136,14 @@ public class ResetPlan : Object
 	}
 
 	/**
-	 * Replace the whole plan with a single branch at `commit` (FR-148).
+	 * Replaces the full plan with one branch at `commit` (FR-148).
 	 *
-	 * The HEAD view's single selection uses this: there a row is one branch, so
-	 * choosing it drops every other branch and keeps only the chosen one. It is
-	 * the counterpart to set_target, which keeps the others; arrow travel picks
-	 * this (it never deselects), a plain click picks set_only_or_clear (a second
-	 * click deselects), and a Ctrl-click toggles to build a multi-branch plan.
+	 * The single selection of the HEAD view uses this method. There a row is
+	 * one branch, thus a selection removes each other branch and keeps only
+	 * the selected one. set_target is the equivalent method that keeps the
+	 * others. Arrow movement uses this method, which does not deselect. A
+	 * plain click uses set_only_or_clear, where a second click deselects. A
+	 * Ctrl-click toggles, to build a multi-branch plan.
 	 */
 	public void set_only(string branch, Ggit.OId commit)
 	{
@@ -148,13 +152,13 @@ public class ResetPlan : Object
 	}
 
 	/**
-	 * Make `branch` at `commit` the whole plan, or clear it when it already is
-	 * (FR-148).
+	 * Makes `branch` at `commit` the full plan, or clears the plan if it is
+	 * already that (FR-148).
 	 *
-	 * The HEAD view's plain click uses this: the first click selects the row as
-	 * the sole target (set_only), and clicking that same row again removes it,
-	 * so the plan empties. It is set_only with a deselect, the single-selection
-	 * counterpart of toggle.
+	 * The plain click of the HEAD view uses this method. The first click
+	 * selects the row as the only target (set_only). A second click on the
+	 * same row removes it, and the plan becomes empty. This is set_only with a
+	 * deselect, and it is the single-selection equivalent of toggle.
 	 */
 	public void set_only_or_clear(string branch, Ggit.OId commit)
 	{
@@ -169,11 +173,11 @@ public class ResetPlan : Object
 	}
 
 	/**
-	 * Remove a branch from the plan outright.
+	 * Removes a branch from the plan.
 	 *
-	 * Used by the reload pruning when a target commit has been pruned from the
-	 * object database (FR-152), a condition the plan cannot see for itself
-	 * because it holds no repository.
+	 * The reload pruning uses this method when the object database no longer
+	 * holds a target commit (FR-152). The plan cannot find this condition
+	 * itself, because it holds no repository.
 	 */
 	public void remove(string branch)
 	{
@@ -181,13 +185,13 @@ public class ResetPlan : Object
 	}
 
 	/**
-	 * Drop entries whose branch is not among `present` (FR-152).
+	 * Removes entries whose branch is not in `present` (FR-152).
 	 *
-	 * Called on a reload with the branches the repository still has. A branch
-	 * that has been deleted cannot be moved, so it leaves the plan; the rest
-	 * stay. Commit-level pruning (a target that has been pruned from the object
-	 * database) is the caller's job, because it holds the repository to look
-	 * the commit up in.
+	 * A reload calls this method with the branches that the repository still
+	 * has. A deleted branch cannot move, thus it leaves the plan. The other
+	 * branches stay. The caller does the commit-level pruning, for a target
+	 * that the object database no longer holds. The caller holds the
+	 * repository, and can look up the commit.
 	 */
 	public void prune(Gee.List<string> present)
 	{

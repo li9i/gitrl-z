@@ -4,45 +4,45 @@
 
 `gitrl-z` shows the reflog the way `gitg` shows history, and previews what a `git reset --hard` would do before you run it. It's pronounced git-ROL-ZED (/ɡɪtˈrəʊlzɛd/), after ctrl-z said aloud: control zed.
 
-The reflog remembers where every branch has been, including commits that a rebase rewrote or a reset abandoned. `gitrl-z` lists it, and when you click an entry it shows your whole history with that entry's branch label moved to where a reset would put it, so you can see where the branch would land without losing sight of what it would leave behind. **Nothing is ever written to the repository.**
+The reflog keeps a record of each position of each branch. This includes commits that a rebase rewrote, and commits that a reset abandoned. `gitrl-z` shows that record. When you click an entry, it draws your full history with the branch label of that entry at the position a reset would give it. Thus you see where the branch goes, and also what the reset leaves behind. **`gitrl-z` writes nothing to the repository.**
 
-![gitrl-z showing a reflog with a rebase run and a reset preview](docs/screenshots/reflog-activity.png)
+![The gitrl-z window with a reflog, a rebase, and a reset preview](docs/screenshots/reflog-activity.png)
 
-It is built from `gitg`: written in gitg's own language (Vala), against the same libraries, and the commit graph in the preview is gitg's own renderer.
+`gitrl-z` is built from `gitg`. It uses the language of gitg (Vala) and the same libraries. The commit graph in the preview is the renderer of gitg.
 
 ## Examples
 
-Each of these is a moment where `git` has left you stuck, and `gitrl-z` shows the way out without writing anything to the repository.
+In each of these examples, `git` puts you in a difficult state. `gitrl-z` shows you the way out, and writes nothing to the repository.
 
-- **You ran `git reset --hard` and your commits vanished.** Find the reflog entry from just before the reset and click it. The graph redraws with your branch moved back to where it was, so you see exactly what returns, and `gitrl-z` shows you the `git reset --hard` command that brings it back.
-- **A rebase left the branch in a mess.** The reflog still holds the tip from before the rebase. Click it to see the branch back at that commit, in the same graph as the rebased version, and reset only once it looks right.
-- **You deleted a branch and want it back.** `gitrl-z` finds where the branch last pointed and offers to recreate it there, so `git branch -D` need not be the end of it.
-- **You landed in a detached HEAD and are not sure how.** It shows where HEAD is sitting among the branches and offers to reattach.
-- **You are about to reset and want to be sure.** Point it at any reflog entry and it draws the resulting history first, so "where will this land?" stops being a guess.
+- **You ran `git reset --hard` and your commits are gone.** Find the reflog entry from immediately before the reset, and click it. The graph draws again with your branch at its initial position. You see what comes back, and `gitrl-z` gives you the `git reset --hard` command that recovers it.
+- **A rebase put the branch in a bad state.** The reflog keeps the tip from before the rebase. Click it to see the branch at that commit, in the same graph as the rebased version. Do the reset only when the result is correct.
+- **You deleted a branch and you want it again.** `gitrl-z` finds the last position of the branch, and offers to make the branch again at that position. Thus `git branch -D` is not permanent.
+- **You are in a detached HEAD and you do not know why.** `gitrl-z` shows the position of HEAD related to the branches, and offers to attach it again.
+- **You will do a reset and you want to be sure.** Select any reflog entry. `gitrl-z` draws the resulting history first, so you know the destination before you do the reset.
 
-## Installing
+## Installation
 
 ### From Launchpad
 
-From the PPA ([available for Ubuntu 24.04 and 26.04](https://launchpad.net/~li9i/+archive/ubuntu/gitrl-z)):
+The PPA is [available for Ubuntu 24.04 and 26.04](https://launchpad.net/~li9i/+archive/ubuntu/gitrl-z):
 
 ```bash
 sudo add-apt-repository ppa:li9i/gitrl-z
 sudo apt-get install gitrl-z
 ```
 
-The package is `gitrl-z`; the command is `gitrlz`.
+The package is `gitrl-z`. The command is `gitrlz`.
 
 ### AppImage
 
-Download the AppImage from the [releases page](https://github.com/li9i/gitrl-z/releases): it's a single file that needs no install. Make it executable and run it:
+Download the AppImage from the [releases page](https://github.com/li9i/gitrl-z/releases). It is one file, and it is not necessary to install it. Make it executable, then run it:
 
 ```bash
 chmod +x gitrl-z-*-x86_64.AppImage
 ./gitrl-z-*-x86_64.AppImage
 ```
 
-If your machine has no FUSE, run it unpacked instead, which needs nothing extra:
+If your machine has no FUSE, run it unpacked. This needs no other software:
 
 ```bash
 ./gitrl-z-*-x86_64.AppImage --appimage-extract-and-run
@@ -54,7 +54,7 @@ To call it as `gitrlz` from any directory, add an alias to your shell from the f
 echo "alias gitrlz='$PWD/gitrl-z-*-x86_64.AppImage'" >> ~/.bashrc
 ```
 
-## Building from source
+## Build from source
 
 ```bash
 git clone https://github.com/li9i/gitrl-z.git
@@ -84,13 +84,13 @@ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$PWD:/src" -w /src gitrlz-build:26.04 ./docker/build-deb.sh resolute '~ubuntu26.04.1'
 ```
 
-The `.deb` lands in `_build/deb/`. Install it with `apt` so its dependencies come with it:
+The `.deb` goes to `_build/deb/`. Install it with `apt`, so that you also get its dependencies:
 
 ```bash
 sudo apt-get install ./_build/deb/gitrl-z_*_amd64.deb
 ```
 
-## Running
+## How to run it
 
 ```bash
 # cd to a repo ...
@@ -108,4 +108,4 @@ Run outside a repository, `gitrlz` opens a chooser listing recently used ones.
 
 ## Licence
 
-GPL-2.0-or-later, inherited from gitg. See `COPYING`, and `debian/copyright` for the per-file breakdown crediting the gitg authors.
+GPL-2.0-or-later, from gitg. Refer to `COPYING`. `debian/copyright` gives the per-file data that credits the gitg authors.

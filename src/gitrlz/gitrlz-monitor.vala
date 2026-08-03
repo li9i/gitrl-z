@@ -18,28 +18,29 @@ namespace Gitrlz
 {
 
 /**
- * Follows a repository as it changes (spec FR-130, FR-131, P-FR-25).
+ * Follows a repository while it changes (spec FR-130, FR-131, P-FR-25).
  *
- * What is watched: the git directory itself, plus its `logs`,
- * `logs/refs/heads` and `refs/heads` subdirectories. Between them these cover
- * every way the display can go stale — HEAD and packed-refs in the git
- * directory, the reflogs, and the branch tips.
+ * This class monitors the git directory, and also its `logs`,
+ * `logs/refs/heads` and `refs/heads` subdirectories. Together these cover
+ * each condition that can make the display stale: HEAD and packed-refs in the
+ * git directory, the reflogs, and the branch tips.
  *
- * Only the git directory is watched, never the working tree, so editing a
- * file changes nothing until git records it.
+ * It monitors only the git directory, and never the working tree. Thus a
+ * change to a file has no effect until git records it.
  *
- * A directory that does not exist yet, such as `logs` in a repository with no
- * commits, is simply not watched; it gets picked up at the next reload rather
- * than being missed for the life of the process.
+ * A directory that does not exist, such as `logs` in a repository with no
+ * commits, has no monitor. The next reload finds it. It is not lost for the
+ * full life of the process.
  *
- * Debounce: one git command touches several files, and a rebase far more. A
- * change schedules the reload 400 ms ahead and each further change pushes it
- * back, so the window reloads once per operation rather than once per file.
+ * Debounce: one git command changes several files, and a rebase changes many
+ * more. A change schedules the reload 400 ms later, and each subsequent
+ * change delays it again. Thus the window reloads one time for each
+ * operation, and not one time for each file.
  *
- * gitg has a Gitg.RecursiveMonitor for this, but it lives in gitg's
- * application sources rather than in libgitg and is not part of the vendored
- * closure; watching four known directories is less machinery than pulling it
- * in and recursing over an entire .git.
+ * gitg has a Gitg.RecursiveMonitor for this. But it is in the application
+ * sources of gitg and not in libgitg, thus it is not in the vendored closure.
+ * Four known directories need less code than that class and a recursion
+ * through a full .git.
  */
 public class Monitor : Object
 {
@@ -48,7 +49,7 @@ public class Monitor : Object
 	private Gee.List<FileMonitor> d_monitors;
 	private uint d_timeout;
 
-	/** Emitted once per settled burst of changes. */
+	/** Emitted one time for each group of changes, after the changes stop. */
 	public signal void changed();
 
 	public bool enabled { get; set; default = true; }
@@ -80,7 +81,8 @@ public class Monitor : Object
 	}
 
 	/**
-	 * Watch a repository's git directory. Replaces any previous watch.
+	 * Monitors the git directory of a repository. Replaces any previous
+	 * monitor.
 	 */
 	public void watch(File? git_dir)
 	{
@@ -112,9 +114,9 @@ public class Monitor : Object
 		}
 		catch (Error e)
 		{
-			// A directory that cannot be watched degrades to manual refresh
-			// rather than taking anything down: F5 and the menu entry still
-			// work (FR-131).
+			// If a directory cannot have a monitor, the user reloads
+			// manually. Nothing stops. F5 and the menu entry continue to
+			// operate (FR-131).
 			warning("could not watch %s: %s", directory.get_path(), e.message);
 		}
 	}

@@ -3,10 +3,10 @@
  *
  * Copyright (C) 2026 alexandros filotheou
  *
- * Derived in structure from gitg's gitg-dash-view.vala,
+ * The structure comes from gitg-dash-view.vala of gitg,
  * Copyright (C) 2015 Ignacio Casal Quinteiro, and licensed under the same
- * terms. gitg's clone entry and its repository-creation paths are absent:
- * gitrl-z opens repositories, it does not make them (spec NFR-4).
+ * terms. The clone entry of gitg and its repository-creation paths are
+ * absent. gitrl-z opens repositories and does not make them (spec NFR-4).
  *
  * gitrl-z is free software: you can redistribute it and/or modify it under the
  * terms of the GNU General Public License as published by the Free Software
@@ -28,9 +28,10 @@ namespace Gitrlz
 /**
  * The repository chooser (spec FR-100, FR-111).
  *
- * Shown when gitrl-z is launched outside a repository, and reachable from the
- * header bar's dash button. Lists recently used repositories, filtered by a
- * search entry, with a button to open one that is not in the list.
+ * gitrl-z shows this view when it starts external to a repository. The dash
+ * button in the header bar also opens it. It shows the repositories used most
+ * recently, a search entry that filters them, and a button that opens a
+ * repository which is not in the list.
  */
 public class DashView : Gtk.Box
 {
@@ -74,8 +75,8 @@ public class DashView : Gtk.Box
 
 		add(scrolled);
 
-		// Seeds the list from Gtk.RecentManager the first time, and from its
-		// own bookmark file afterwards.
+		// Fills the list from Gtk.RecentManager the first time, then from
+		// its own bookmark file.
 		d_repository_list.populate_bookmarks();
 
 		show_all();
@@ -108,9 +109,10 @@ public class DashView : Gtk.Box
 	}
 
 	/**
-	 * Open a chosen directory, reporting rather than throwing when it is not
-	 * a repository. Discovery is the same one the command line uses, so a
-	 * directory inside a repository opens that repository (spec FR-2).
+	 * Opens a selected directory. If the directory is not a repository, this
+	 * method reports the error and does not throw. It uses the same discovery
+	 * as the command line. Thus a directory in a repository opens that
+	 * repository (spec FR-2).
 	 */
 	private void open_location(File file)
 	{
@@ -125,9 +127,9 @@ public class DashView : Gtk.Box
 
 		try
 		{
-			// Through Gitrlz.Repository.open, not a direct construction: it is
-			// the one place a repository handle is created (NFR-4), and the
-			// only place Gitg.init() is guaranteed to have run first.
+			// Through Gitrlz.Repository.open, and not a direct construction.
+			// That method is the one location that makes a repository handle
+			// (NFR-4), and the only location where Gitg.init() ran first.
 			repository_activated(Gitrlz.Repository.open(location));
 		}
 		catch (Error e)

@@ -1,23 +1,23 @@
 # The build container
 
-## Why it exists
+## Purpose
 
-The container is **not** the intended development environment. Spec NFR-10
-says development and running happen natively on the host, because the host is
-already the target platform — Ubuntu 24.04 noble with gitg 44 — and running
-natively gets the real GTK theme with no X11 socket plumbing.
+The container is **not** the development environment. Spec NFR-10 says that
+development and operation occur natively on the host. The host is already the
+target platform, Ubuntu 24.04 noble with gitg 44. A native run also gets the
+real GTK theme, with no X11 socket configuration.
 
-What the container is for is proving that `Build-Depends` is complete. It
-installs a declared list and nothing else, so anything the build needs that
-is not on that list fails here even if it happens to be sitting on the
-developer's machine. That is the same job `pbuilder` and `sbuild` do for
-Debian maintainers, and it is why the package build runs in
-here rather than on the host.
+The container proves that `Build-Depends` is complete. It installs a declared
+list and nothing else. Thus the build fails here if it needs software that is
+not on that list. This occurs also when that software is on the machine of
+the developer. `pbuilder` and `sbuild` do the same for Debian maintainers.
+This is why the
+package build runs in the container and not on the host.
 
-It is also useful when the host lacks the Vala toolchain and installing it
-would need a password.
+The container is also useful if the host has no Vala toolchain and an
+installation needs a password.
 
-## Using it
+## How to use it
 
     docker build -t gitrlz-build .
 
@@ -28,33 +28,34 @@ would need a password.
     # Interactive shell (always containerised):
     ./scripts/dev.sh shell
 
-The source tree is bind-mounted at `/src`; nothing is copied into the image.
-Edit on the host, build in the container.
+Docker bind-mounts the source tree at `/src`, and copies nothing into the
+image. Edit on the host, build in the container.
 
-`scripts/dev.sh` runs the container as the invoking user (`--user $(id -u)`)
-so build products in the bind-mounted tree are not left owned by root. If you
-run `docker run` by hand without that flag, expect to need
-`./scripts/dev.sh clean` afterwards.
+`scripts/dev.sh` runs the container as the user who calls it
+(`--user $(id -u)`). Thus root does not own the build products in the
+bind-mounted tree. If you run `docker run` manually without that flag,
+`./scripts/dev.sh clean` becomes necessary.
 
-## Running the GUI from the container
+## How to run the GUI from the container
 
-The container has Xvfb, so the application can be run and screenshotted
-headlessly:
+The container has Xvfb. Thus you can run the application and make a
+screenshot with no display:
 
     docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
         -v "$PWD:/src" -w /src gitrlz-build \
         xvfb-run -a --server-args="-screen 0 1200x800x24" ./_build/src/gitrlz/gitrlz
 
-That is how the M1 gate screenshot was taken. Note that a window rendered
-under Xvfb uses whatever theme the container has, **not** the host's — which
-is precisely why visual comparison against the installed gitg belongs on the
-host, and why the visual suite is gated off by default (spec 6.3).
+This is how the screenshot was made. A window that Xvfb renders uses the
+theme of the container, **not** the theme of the host. Thus a visual
+comparison with the installed gitg must occur on the host, and the visual
+suite is off by default (spec 6.3).
 
 ## Dependency list
 
-The `Dockerfile` installs a deliberately reduced set: Debian's gitg
-`Build-Depends` minus everything gitrl-z's excluded subsystems drag in
-(gtksourceview-4, gspell, json-glib, libsecret, gpgme, libpeas, and the
-libxml2 chain). Each omission is annotated in the `Dockerfile`.
+The `Dockerfile` installs an intentionally smaller set. It is the gitg
+`Build-Depends` of Debian, less the dependencies of the subsystems that
+gitrl-z excludes (gtksourceview-4, gspell, json-glib, libsecret, gpgme,
+libpeas, and the libxml2 chain). The `Dockerfile` gives a note for each
+removed dependency.
 
-The build succeeding in here is the evidence for that pruning.
+A successful build in the container shows that these removals are correct.

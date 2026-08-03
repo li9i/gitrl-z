@@ -18,11 +18,12 @@ namespace Gitrlz
 {
 
 /**
- * The time window the reflog list can be limited to (spec FR-156, IC-162).
+ * The time window that limits the reflog list (spec FR-156, IC-162).
  *
- * Three presets and no more: the spec offers no custom window. The `seconds`
- * accessor turns a preset into the length ReflogFilter.visible() measures
- * against, with ANY mapping to zero, which visible() reads as "no window".
+ * There are three presets only, because the spec has no custom window. The
+ * `seconds` accessor changes a preset into the length that
+ * ReflogFilter.visible() measures against. ANY gives zero, and visible()
+ * reads zero as "no window".
  */
 public enum TimeWindow
 {
@@ -42,24 +43,26 @@ public enum TimeWindow
 }
 
 /**
- * Deciding which reflog rows a limit leaves visible (spec IC-160, IC-161).
+ * Decides which reflog rows stay visible after a limit (spec IC-160, IC-161).
  *
- * Pure logic, no widgets: the reflog list computes its visible set through
- * visible() so the combine rule of FR-158 can be tested against an injected
- * `now`, which a live fixture cannot exercise (its entries are all seconds
- * old). The reflog list owns the `Gtk.TreeModelFilter`; this only says, per
- * entry, whether it stays.
+ * This class has logic only and no widgets. The reflog list computes its
+ * visible set through visible(). Thus a test can give the combine rule of
+ * FR-158 an injected `now`. A live fixture cannot do this, because its
+ * entries are all some seconds old. The reflog list owns the
+ * `Gtk.TreeModelFilter`. This class only says, for each entry, if the entry
+ * stays.
  */
 public class ReflogFilter : Object
 {
 	/**
-	 * The count a typed Entries value means (IC-161).
+	 * The count that a typed Entries value gives (IC-161).
 	 *
-	 * The first run of decimal digits in `text`, when it is a positive whole
-	 * number; otherwise 0, which visible() reads as "no cap". So "All" gives 0,
-	 * "Last 10" gives 10, "25" gives 25, and a blank or non-numeric field gives
-	 * 0. The Entries control is an editable combo, so anything at all can arrive
-	 * here, and none of it is an error (spec section 5).
+	 * The result is the first group of decimal digits in `text`, if that group
+	 * is a positive whole number. If not, the result is 0, and visible() reads
+	 * 0 as "no limit". Thus "All" gives 0, "Last 10" gives 10, and "25" gives
+	 * 25. An empty or non-numeric field gives 0. The Entries control is an
+	 * editable combo, thus any text can arrive here, and no text is an error
+	 * (spec section 5).
 	 */
 	public static uint parse_count(string text)
 	{
@@ -75,7 +78,7 @@ public class ReflogFilter : Object
 			}
 			else if (digits.len > 0)
 			{
-				// The first run has ended; ignore the rest.
+				// The first group of digits stops here. Ignore the remainder.
 				break;
 			}
 		}
@@ -91,14 +94,15 @@ public class ReflogFilter : Object
 	}
 
 	/**
-	 * Which of `entries` a limit leaves visible (IC-160).
+	 * Gives the entries in `entries` that a limit leaves visible (IC-160).
 	 *
-	 * `entries` is newest first, as Reflog.read returns it. The predicates are
-	 * applied in order to each entry: substring search (FR-117), then the time
-	 * window (FR-156), then the entry count (FR-157). `window_seconds` of 0 or
-	 * less is Any time; `count` of 0 is All; `search` of "" is no search. An
-	 * entry with no date always passes the window (FR-159). The returned array
-	 * has one flag per entry, in the same order, true for visible.
+	 * `entries` is newest first, as Reflog.read returns it. The code applies
+	 * the predicates to each entry in this order: substring search (FR-117),
+	 * then the time window (FR-156), then the entry count (FR-157). A
+	 * `window_seconds` of 0 or less is Any time. A `count` of 0 is All. A
+	 * `search` of "" is no search. An entry with no date always passes the
+	 * window (FR-159). The returned array has one flag for each entry, in the
+	 * same order, and true means visible.
 	 */
 	public static bool[] visible(Gee.List<ReflogEntry> entries,
 	                             DateTime now,
@@ -108,15 +112,16 @@ public class ReflogFilter : Object
 	{
 		var result = new bool[entries.size];
 
-		// The oldest instant an entry may carry and still fall in the window.
-		// Null when there is no window, so the window check is skipped entirely.
+		// The oldest time that an entry can have and stay in the window. Null
+		// if there is no window, and then the code does not do the window
+		// check.
 		DateTime? cutoff = window_seconds > 0
 			? now.add_seconds(-(double)window_seconds)
 			: null;
 
-		// How many rows have been made visible so far, for the count cap. The
-		// list is newest first, so the first `count` passing rows are the
-		// newest `count`.
+		// The number of visible rows to this point, for the count limit. The
+		// list is newest first, thus the first `count` rows that pass are the
+		// newest `count` rows.
 		uint shown = 0;
 
 		for (var i = 0; i < entries.size; i++)
@@ -125,24 +130,26 @@ public class ReflogFilter : Object
 			var pass = true;
 
 			// Search (FR-117): the message or the abbreviated id contains the
-			// term. Matched against the entry, exactly as the list did before.
+			// term. The comparison is against the entry, as the list did
+			// before.
 			if (search != "")
 			{
 				pass = entry.message.down().contains(search)
 					|| entry.abbreviated_id.down().contains(search);
 			}
 
-			// Time window (FR-156, FR-159): an entry we cannot date always
-			// passes, so the newest entry can never be hidden by the clock.
+			// Time window (FR-156, FR-159): an entry with no date always
+			// passes. Thus the clock cannot hide the newest entry.
 			if (pass && cutoff != null && entry.date != null)
 			{
 				pass = entry.date.compare(cutoff) >= 0;
 			}
 
-			// Entry count (FR-157, FR-158): keep only the newest `count` of the
-			// rows that passed search and the window. `count` of 0 is no cap.
-			// Only a still-passing row counts toward the cap, so a search or
-			// window miss never uses up one of the newest slots.
+			// Entry count (FR-157, FR-158): keep only the newest `count` rows
+			// that passed the search and the window. A `count` of 0 is no
+			// limit. Only a row that still passes counts against the limit.
+			// Thus a search miss or a window miss does not use one of the
+			// newest positions.
 			if (pass && count > 0)
 			{
 				if (shown >= count)

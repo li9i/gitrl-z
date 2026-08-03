@@ -23,13 +23,13 @@ namespace Gitrlz
 /**
  * Preferences (spec FR-115).
  *
- * Every control here binds to a key in the gitrl-z schema, and every key in
- * that schema is one gitrl-z reads. gitg's commit, clone, diff and gravatar
- * pages have no counterpart because the settings behind them do not exist.
+ * Each control here binds to a key in the gitrl-z schema, and gitrl-z reads
+ * each key in that schema. The commit, clone, diff and gravatar pages of gitg
+ * have no equivalent, because the settings for them do not exist.
  *
- * Bindings are made with Settings.bind, so the dialog has no save step and
- * no apply button: a change takes effect as it is made, and the schema is
- * the single source of truth.
+ * Settings.bind makes the bindings. Thus the dialog has no save step and no
+ * apply button. A change becomes effective immediately, and the schema holds
+ * the only copy of the data.
  */
 public class PreferencesDialog : Gtk.Dialog
 {
@@ -70,9 +70,9 @@ public class PreferencesDialog : Gtk.Dialog
 		var orientation = new Gtk.ComboBoxText();
 		orientation.append("horizontal", _("Horizontal"));
 		orientation.append("vertical", _("Vertical"));
-		// The key is an enum, and ComboBoxText's active-id is a string, so
-		// the mapping is by nick. bind_with_mapping would be the general
-		// answer; for two values the nicks are the strings already.
+		// The key is an enum, and the active-id of ComboBoxText is a string.
+		// Thus the mapping uses the nick. bind_with_mapping is the general
+		// solution. For two values the nicks are already the strings.
 		orientation.active_id = d_interface_settings.get_string("orientation");
 		orientation.changed.connect(() => {
 			if (orientation.active_id != null)
@@ -90,8 +90,8 @@ public class PreferencesDialog : Gtk.Dialog
 		var font_button = new Gtk.FontButton();
 		d_interface_settings.bind("monospace-font-name", font_button, "font",
 		                          SettingsBindFlags.DEFAULT);
-		// Choosing a font is meaningless while the system font is in use, so
-		// the control follows the checkbox rather than sitting there inert.
+		// A font selection has no effect while the system font is in use.
+		// Thus the control follows the checkbox.
 		d_interface_settings.bind("use-default-font", font_button, "sensitive",
 		                          SettingsBindFlags.GET | SettingsBindFlags.INVERT_BOOLEAN);
 		add_row(grid, ref row, _("_Font:"), font_button);

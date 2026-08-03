@@ -23,18 +23,18 @@ namespace Gitrlz
 /**
  * One reflog entry (spec IC-103).
  *
- * Ggit.ReflogEntry exposes the message, the committer signature and the old
- * and new ids, and nothing else. In particular it has no selector string and
- * no author: the displayed `<ref>@{n}` is built from the index here, and the
- * date comes from the committer signature. The Python implementation parsed
- * both out of git's own output; that parsing has no counterpart now.
+ * Ggit.ReflogEntry gives the message, the committer signature, and the old and
+ * new ids. It gives nothing else. It has no selector string and no author.
+ * This class builds the displayed `<ref>@{n}` from the index, and takes the
+ * date from the committer signature. The Python implementation parsed the two
+ * from the output of git. That code has no equivalent now.
  */
 public class ReflogEntry : Object
 {
 	/** The ref whose reflog this entry came from: "HEAD", a branch, "stash". */
 	public string ref_name { get; construct set; }
 
-	/** Position in the reflog, 0 being the newest entry. */
+	/** Position in the reflog. 0 is the newest entry. */
 	public uint index { get; construct set; }
 
 	/** The commit the ref pointed at after this entry. */
@@ -43,7 +43,7 @@ public class ReflogEntry : Object
 	/** The commit the ref pointed at before it. */
 	public Ggit.OId? old_id { get; construct set; }
 
-	/** git's own reflog message, unchanged, as IC-8 describes it. */
+	/** The reflog message of git, unchanged, as IC-8 describes it. */
 	public string message { get; construct set; }
 
 	public DateTime? date { get; construct set; }
@@ -72,7 +72,7 @@ public class ReflogEntry : Object
 	}
 
 	/**
-	 * The abbreviated hash, as git's --abbrev-commit shows it.
+	 * The abbreviated hash, as --abbrev-commit of git shows it.
 	 */
 	public string abbreviated_id
 	{
@@ -91,19 +91,19 @@ public class ReflogEntry : Object
 }
 
 /**
- * Reading reflogs (spec IC-103).
+ * Reads reflogs (spec IC-103).
  */
 public class Reflog : Object
 {
 	/**
-	 * Read the reflog of a ref, newest entry first.
+	 * Reads the reflog of a ref, newest entry first.
 	 *
 	 * `ref_name` is "HEAD", a local branch name, or "stash".
 	 *
-	 * A ref that does not resolve — an unborn HEAD, a branch that has just
-	 * been deleted, a repository with no stash — yields an empty list and no
-	 * error, which is what IC-4 specified and what the placeholder in
-	 * P-FR-14 expects.
+	 * If a ref does not resolve, the result is an empty list and no error.
+	 * Examples are an unborn HEAD, a branch deleted a short time before, and a
+	 * repository with no stash. IC-4 specifies this, and the placeholder in
+	 * P-FR-14 needs it.
 	 */
 	public static Gee.List<ReflogEntry> read(Gitg.Repository repository, string ref_name)
 	{
@@ -115,39 +115,40 @@ public class Reflog : Object
 		{
 			if (ref_name == "HEAD")
 			{
-				// Deliberately not dwim for HEAD.
+				// This code does not use dwim for HEAD.
 				//
-				// dwim resolves HEAD through to the branch it points at, and
-				// the reflog you then read is that branch's (.git/logs/refs/
-				// heads/main) rather than HEAD's own (.git/logs/HEAD). Those
-				// are different logs: HEAD's records checkouts and resets
-				// that never touched the branch, which is most of what the
-				// `all` view exists to show. Looking the name up directly
-				// keeps the symbolic ref, and with it the right log.
+				// dwim resolves HEAD to the branch that it points at. The
+				// reflog that you then read is the reflog of that branch
+				// (.git/logs/refs/heads/main), and not the reflog of HEAD
+				// (.git/logs/HEAD). These are different logs. The log of
+				// HEAD records checkouts and resets that did not change the
+				// branch, and the `all` view shows mostly those. A direct
+				// lookup of the name keeps the symbolic ref, and thus the
+				// correct log.
 				reference = repository.lookup_reference("HEAD");
 			}
 			else
 			{
-				// dwim resolves a bare branch name and "stash" alike, which
-				// covers the rest of what the sidebar offers.
+				// dwim resolves a bare branch name and "stash" in the same
+				// way. This covers the other items in the sidebar.
 				reference = repository.lookup_reference_dwim(ref_name);
 			}
 		}
 		catch (Error e)
 		{
-			// A ref that does not resolve is not an error condition here: an
-			// unborn HEAD, a deleted branch and an absent stash all land
-			// exactly here, and all three mean "nothing to show" (IC-4).
+			// A ref that does not resolve is not an error here. An unborn
+			// HEAD, a deleted branch and an absent stash all come here, and
+			// the three mean "nothing to show" (IC-4).
 			return entries;
 		}
 
 		if (reference == null)
 		{
-			// Distinct from the case above, and worth saying out loud.
-			// lookup_reference_dwim() returns null when its cast to Gitg.Ref
-			// fails, which means the Ggit -> Gitg object factory was never
-			// registered. Silently returning "no entries" for that would
-			// present a library initialisation bug as an empty reflog.
+			// This is different from the condition above, and it needs a
+			// message. lookup_reference_dwim() returns null if its cast to
+			// Gitg.Ref fails. That means that the Ggit -> Gitg object
+			// factory has no registration. A quiet result of "no entries"
+			// would show a library initialisation bug as an empty reflog.
 			warning("reflog lookup for '%s' returned no reference; " +
 			        "is Gitg.init() called before opening a repository?", ref_name);
 			return entries;
@@ -155,8 +156,8 @@ public class Reflog : Object
 
 		try
 		{
-			// Note the name: Ggit.Ref.get_log(), not get_reflog(). has_log()
-			// distinguishes "no reflog file" from "reflog read failed".
+			// The name is Ggit.Ref.get_log(), and not get_reflog(). has_log()
+			// separates "no reflog file" from "reflog read failed".
 			if (!reference.has_log())
 			{
 				return entries;

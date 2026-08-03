@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2026 alexandros filotheou
  *
- * Derived in structure from gitg's gitg-window.vala,
+ * The structure comes from gitg-window.vala of gitg,
  * Copyright (C) 2012 Jesse van den Kieboom, and licensed under the same
  * terms.
  *
@@ -89,9 +89,9 @@ public class Window : Gtk.ApplicationWindow
 		});
 		d_main_stack.add_named(d_dash_view, "dash");
 
-		// The one activity gitrl-z has (FR-120). Compiled in rather than
-		// loaded: gitg's own History activity is listed directly in its
-		// sources too, so dropping libpeas costs nothing here.
+		// The one activity that gitrl-z has (FR-120). It is compiled in and
+		// not loaded. The History activity of gitg is also listed directly
+		// in its sources, thus the removal of libpeas has no cost here.
 		d_reflog = new Gitrlz.ReflogPaned();
 		d_stack_activities.add_titled(d_reflog, "reflog", _("Reflog"));
 
@@ -99,23 +99,23 @@ public class Window : Gtk.ApplicationWindow
 			d_reflog.reload();
 		});
 
-		// FR-117: the header bar's search toggle drives the activity's search
-		// bar. Binding active <-> search_mode_enabled keeps the button and the
-		// bar's own close control in step.
+		// FR-117: the search toggle in the header bar drives the search bar
+		// of the activity. A binding of active <-> search_mode_enabled keeps
+		// the button and the close control of the bar in agreement.
 		d_search_button.toggled.connect(() => {
 			d_reflog.set_search_visible(d_search_button.active);
 		});
 
 		restore_state();
 
-		// The dash is what a window without a repository shows (FR-100), so
-		// it is also the sensible state to start in: open_repository() moves
-		// off it when there is something to open.
+		// A window with no repository shows the dash (FR-100). Thus the dash
+		// is also the correct initial state. open_repository() changes the
+		// state when a repository is available.
 		show_dash();
 	}
 
 	/**
-	 * Restore and follow window geometry (FR-116).
+	 * Restores the window geometry and follows changes to it (FR-116).
 	 */
 	private void restore_state()
 	{
@@ -144,9 +144,9 @@ public class Window : Gtk.ApplicationWindow
 
 	protected override bool configure_event(Gdk.EventConfigure event)
 	{
-		// Only an unmaximised size is worth remembering; storing the
-		// maximised one would restore a window that fills the screen but is
-		// not actually maximised.
+		// Keep only an unmaximised size. If the code stored the maximised
+		// size, it would restore a window that fills the screen but is not
+		// maximised.
 		if ((d_state_settings.get_int("state") & Gdk.WindowState.MAXIMIZED) == 0)
 		{
 			int width;
@@ -160,10 +160,10 @@ public class Window : Gtk.ApplicationWindow
 	}
 
 	/**
-	 * Open a repository, or report why it cannot be opened.
+	 * Opens a repository, or reports the cause of a failure.
 	 *
-	 * `location` is a repository location as returned by
-	 * Application.discover_repository, not an arbitrary path.
+	 * `location` is a repository location from
+	 * Application.discover_repository. It is not an arbitrary path.
 	 */
 	public void open_repository(File location)
 	{
@@ -173,10 +173,10 @@ public class Window : Gtk.ApplicationWindow
 		}
 		catch (Error e)
 		{
-			// An unopenable repository is reported in the window rather than
-			// on the command line: by this point a window exists, and taking
-			// the whole application down over one bad path would be worse
-			// than showing the dash with an explanation (spec section 5).
+			// The window reports a repository that it cannot open. The
+			// command line does not. A window exists at this point, and a
+			// stop of the full application because of one bad path is worse
+			// than the dash with an explanation (spec section 5).
 			show_infobar(_("Failed to open repository"), e.message, Gtk.MessageType.ERROR);
 			d_repository = null;
 			show_dash();
@@ -254,8 +254,8 @@ public class Window : Gtk.ApplicationWindow
 
 	private void on_reload_activated(SimpleAction action, Variant? parameter)
 	{
-		// The reflog activity does the actual reloading (FR-130); this is the
-		// F5 and menu entry point that will drive it.
+		// The reflog activity does the reload (FR-130). This is the entry
+		// point for F5 and the menu that drives it.
 		reload();
 	}
 

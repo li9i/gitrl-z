@@ -20,33 +20,35 @@ namespace Gitrlz
 /**
  * The branch-to-colour map (spec FR-153, IC 4.3).
  *
- * A branch's colour in the reflog list has to be the colour gitg's graph
- * gives it in the preview, or the two panes disagree. gitg colours a lane the
- * moment it opens during the revision walk (`Color.next()` in
- * `gitg-lane.vala`), so a branch's colour is a function of the *topological
- * walk order*, not of anything stable like the branch's name. The only way to
- * learn it is to run the same walk.
+ * The colour of a branch in the reflog list must be the colour that the graph
+ * of gitg gives it in the preview. If not, the two panes disagree. gitg
+ * colours a lane when the lane opens during the revision walk (`Color.next()`
+ * in `gitg-lane.vala`). Thus the colour of a branch is a function of the
+ * *topological walk order*, and not of stable data such as the branch name.
+ * To find the colour, the code must run the same walk.
  *
- * That is what this does: it runs gitg's own lane engine over the repository's
- * actual branch tips, with the sort mode and reset that `Gitg.CommitModel`
- * uses, and records for each branch tip the palette index of the lane it lands
- * on. The result is the colour the graph draws that branch at the baseline
- * (an empty plan), computed once per reload.
+ * This class runs the lane engine of gitg over the branch tips of the
+ * repository. It uses the sort mode and the reset that `Gitg.CommitModel`
+ * uses. For each branch tip, it records the palette index of the lane that
+ * receives the tip. The result is the colour that the graph draws for that
+ * branch at the baseline (an empty plan). The code computes this one time for
+ * each reload.
  *
- * Read-only: the walker and the lane engine traverse, they do not write
- * (NFR-4). No vendored code is modified; this uses `Gitg.Lanes` and
- * `Gitg.Color`, it does not patch them.
+ * Read-only: the walker and the lane engine traverse the history, and do not
+ * write (NFR-4). This class does not modify vendored code. It uses
+ * `Gitg.Lanes` and `Gitg.Color`, and does not patch them.
  */
 public class BranchColours : Object
 {
 	/**
-	 * Map each branch in `tips` to the palette index gitg's graph would give
-	 * it, or leave it absent when the walk never places its tip.
+	 * Maps each branch in `tips` to the palette index that the graph of gitg
+	 * would give it. If the walk does not place the tip of a branch, that
+	 * branch stays absent.
 	 *
-	 * `tips` is the branch-name to tip-commit map the preview is drawn over.
-	 * The returned map is keyed by the same branch names; a branch missing
-	 * from it is read by callers as "no colour" (index -1), exactly as an
-	 * unknown branch is treated today (P-FR-16).
+	 * `tips` is the map of branch name to tip commit that the preview uses.
+	 * The returned map has the same branch names as keys. If a branch is not
+	 * in the map, callers read it as "no colour" (index -1). This is the same
+	 * as the current treatment of an unknown branch (P-FR-16).
 	 */
 	public static Gee.Map<string, int> map(Gitg.Repository repository,
 	                                       Gee.Map<string, Ggit.OId> tips)
@@ -58,9 +60,9 @@ public class BranchColours : Object
 			return colours;
 		}
 
-		// A commit can be several branches' tip at once, so the reverse lookup
-		// is one id to many names. Keyed by the id's string form, which is what
-		// a walked commit can be compared by.
+		// A commit can be the tip of several branches. Thus the reverse lookup
+		// is one id to many names. The key is the string form of the id, which
+		// permits a comparison with a walked commit.
 		var branches_at = new Gee.HashMap<string, Gee.List<string>>();
 
 		foreach (var entry in tips.entries)
@@ -81,8 +83,8 @@ public class BranchColours : Object
 			walker.reset();
 			walker.set_sort_mode(Ggit.SortMode.TOPOLOGICAL | Ggit.SortMode.TIME);
 
-			// The roots the lane engine is told about, matching the `incset`
-			// CommitModel.walk builds from the included tips.
+			// The roots that the lane engine receives. They agree with the
+			// `incset` that CommitModel.walk builds from the included tips.
 			var roots = new Gee.HashSet<Ggit.OId>((Gee.HashDataFunc<Ggit.OId>)Ggit.OId.hash,
 			                                      (Gee.EqualDataFunc<Ggit.OId>)Ggit.OId.equal);
 
@@ -95,18 +97,19 @@ public class BranchColours : Object
 			var lanes = new Gitg.Lanes();
 			lanes.reset(new Ggit.OId[0], roots);
 
-			// gitg's lane engine keeps *weak* references to the commits it has
-			// seen (Lanes.d_previous), and reaches back into them when it
+			// The lane engine of gitg keeps *weak* references to the commits
+			// that it read (Lanes.d_previous). It reads them again when it
 			// collapses inactive lanes on a long history. CommitModel keeps
-			// every commit alive in an array for exactly this reason, and so
-			// must this: without it those weak references dangle the moment
-			// collapsing begins, and the walk segfaults. Small histories never
-			// collapse, which is why this only bites on a real repository.
+			// each commit in an array because of this, and this code must do
+			// the same. If it does not, those weak references become invalid
+			// when the collapse starts, and the walk segfaults. Small
+			// histories do not collapse. Thus the problem occurs only on a
+			// large repository.
 			var retained = new Gee.ArrayList<Gitg.Commit>();
 
-			// Stop once every branch has a colour. The tips sit near the top of
-			// the history, so this is usually a short walk, and it bounds the
-			// cost on a large repository (spec §3).
+			// Stop when each branch has a colour. The tips are near the top of
+			// the history, thus the walk is usually short. This also limits
+			// the cost on a large repository (spec §3).
 			while (colours.size < tips.size)
 			{
 				var id = walker.next();
@@ -134,10 +137,10 @@ public class BranchColours : Object
 					record(colours, branches_at, commit);
 				}
 
-				// A commit whose parents are not placed yet is parked in
-				// miss_commits and retried, exactly as CommitModel.walk does.
-				// Replicated so the lane-open order, and thus the colours, match
-				// the graph rather than merely approximating it.
+				// If the parents of a commit are not yet placed, the commit
+				// goes to miss_commits for a retry. CommitModel.walk does the
+				// same. This code copies that behaviour, so that the lane-open
+				// order, and thus the colours, agree with the graph exactly.
 				while (lanes.miss_commits.size > 0)
 				{
 					var progressed = false;
@@ -165,10 +168,10 @@ public class BranchColours : Object
 		}
 		catch (Error e)
 		{
-			// A walk that cannot run leaves the map as far as it got, which for
-			// a failure at construction is empty. Every chip then renders
-			// uncoloured (spec §5); gitrl-z does not fail to open over a colour
-			// it could not compute.
+			// If the walk cannot run, the map keeps the data that the walk
+			// found. For a failure at construction, the map is empty. Each
+			// chip then renders with no colour (spec §5). gitrl-z opens
+			// correctly even when it cannot compute a colour.
 			warning("branch colour walk failed: %s", e.message);
 		}
 
@@ -176,10 +179,11 @@ public class BranchColours : Object
 	}
 
 	/**
-	 * If `commit` is a branch tip not yet recorded, note its lane's colour.
+	 * If `commit` is a branch tip with no record, record the colour of its
+	 * lane.
 	 *
-	 * First writing wins: a tip is emitted once, and its lane's colour at that
-	 * moment is the graph's colour for the branch.
+	 * The first write has priority. The walk emits a tip one time only, and
+	 * the colour of its lane at that time is the graph colour for the branch.
 	 */
 	private static void record(Gee.Map<string, int> colours,
 	                           Gee.Map<string, Gee.List<string>> branches_at,

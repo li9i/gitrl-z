@@ -18,7 +18,7 @@ namespace Gitrlz
 {
 
 /**
- * Columns of the reflog list's model.
+ * Columns of the model of the reflog list.
  */
 public enum ReflogColumn
 {
@@ -37,15 +37,15 @@ public enum ReflogColumn
 /**
  * The reflog list (spec FR-123, FR-147, FR-151, FR-153, P-FR-11 to P-FR-16).
  *
- * Columns, left to right: the operation gutter, a Branch chip shown only in
- * the `all` view, then SHA, Message, Date and Selector. The hash leads
- * because it is what the eye looks for; the selector trails because it is
- * positional bookkeeping rather than content. No author, no email.
+ * The columns, from left to right: the operation gutter, a Branch chip that
+ * only the `all` view shows, then SHA, Message, Date and Selector. The hash is
+ * first, because the user looks for it. The selector is last, because it is
+ * position data and not content. There is no author and no email.
  *
- * Columns size to their content on open (FR-147) and stay resizable. A row
- * that is part of the reset plan carries a faint background tint in its
- * branch's colour (FR-151), and every branch's colour comes from the map the
- * graph's own lane walk produced (FR-153).
+ * The columns fit their content at open (FR-147), and the user can resize
+ * them. A row in the reset plan has a light background tint in the colour of
+ * its branch (FR-151). The colour of each branch comes from the map that the
+ * lane walk of the graph made (FR-153).
  */
 public class ReflogList : Object
 {
@@ -73,14 +73,14 @@ public class ReflogList : Object
 	private Gee.Map<string, int>? d_colours;
 
 	/**
-	 * The branch a branch-view's rows all belong to, or null in the `all` and
+	 * The branch of all rows in a branch view, or null in the `all` and
 	 * `stash` views.
 	 *
-	 * A branch's own reflog has no checkout entries, so attributing rows by
-	 * checkout tracking would credit them to the default branch, not the one
-	 * whose log this is. The plan targets the view's branch there (as
-	 * ResetPreview.target_branch_for does), so the tint has to as well, or a
-	 * planned row in a branch view is never marked.
+	 * The reflog of a branch has no checkout entries. Thus attribution by
+	 * checkout tracking would give the rows to the default branch, and not to
+	 * the branch of this log. There the plan targets the branch of the view,
+	 * as ResetPreview.target_branch_for does. The tint must do the same. If
+	 * not, a planned row in a branch view has no mark.
 	 */
 	private string? d_view_branch;
 
@@ -90,26 +90,28 @@ public class ReflogList : Object
 	/** The search text, lowercased, or "" for no filtering (FR-117). */
 	private string d_filter_text = "";
 
-	/** The time window the list is limited to (FR-156), ANY for no window. */
+	/** The time window that limits the list (FR-156). ANY is no window. */
 	private TimeWindow d_window = TimeWindow.ANY;
 
-	/** The entry-count cap (FR-157), 0 for no cap. */
+	/** The entry-count limit (FR-157). 0 is no limit. */
 	private uint d_count = 0;
 
 	/**
-	 * Which store rows a limit leaves visible, one flag per entry (IC-160).
+	 * The store rows that a limit leaves visible, one flag for each entry
+	 * (IC-160).
 	 *
-	 * Recomputed whenever the entries or any limit change, so the filter's
-	 * per-row callback is a lookup rather than a walk. The count cap has to
-	 * know how many earlier rows passed, which a per-row predicate cannot see,
-	 * so the whole list is judged at once, here.
+	 * The code computes this again when the entries or a limit change. Thus
+	 * the callback of the filter for each row is a lookup and not a walk. The
+	 * count limit must know how many earlier rows passed, and a predicate for
+	 * one row cannot know this. Thus the code decides the full list at one
+	 * time, here.
 	 */
 	private bool[] d_visible = {};
 
-	/** How faint the plan tint is: a wash of the branch colour, not a block. */
+	/** The strength of the plan tint: a light wash, and not a solid block. */
 	private const double TINT_ALPHA = 0.28;
 
-	/** Slack added to a fitted column, and to a header measured for its title. */
+	/** Extra width for a fitted column, and for a header measured for its title. */
 	private const int COLUMN_PAD = 10;
 	private const int HEADER_PAD = 28;
 
@@ -129,10 +131,10 @@ public class ReflogList : Object
 		                            typeof(string),   // SELECTOR
 		                            typeof(string));  // PLAN_BG
 
-		// A filter model sits between the store and the view so search can
-		// hide rows without touching the underlying data (FR-117). The path
-		// the view hands back is then a filtered path, which the accessors
-		// below convert to a store row before indexing d_entries.
+		// A filter model is between the store and the view. Thus a search can
+		// hide rows and does not change the data (FR-117). The view then
+		// returns a filtered path. The accessors below change that path to a
+		// store row before they index d_entries.
 		d_filter = new Gtk.TreeModelFilter(d_store, null);
 		d_filter.set_visible_func(row_matches_filter);
 
@@ -142,11 +144,11 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * Whether a row passes the current limits (FR-117, FR-156, FR-157).
+	 * Says if a row passes the current limits (FR-117, FR-156, FR-157).
 	 *
-	 * The decision was made in recompute_visible() and cached in d_visible,
-	 * indexed by store row; here it is only read back. A row whose index is out
-	 * of range, which can happen mid-rebuild, defaults to visible.
+	 * recompute_visible() made the decision and put it in d_visible, indexed
+	 * by store row. This method only reads it. If the index of a row is out of
+	 * range, which can occur during a rebuild, the row is visible.
 	 */
 	private bool row_matches_filter(Gtk.TreeModel model, Gtk.TreeIter iter)
 	{
@@ -163,7 +165,7 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * Set the search text (FR-117). Empty clears the search predicate.
+	 * Sets the search text (FR-117). An empty string clears the predicate.
 	 */
 	public void filter_text(string? text)
 	{
@@ -172,7 +174,7 @@ public class ReflogList : Object
 		d_filter.refilter();
 	}
 
-	/** Limit the list to a time window (FR-156); ANY is no window. */
+	/** Limits the list to a time window (FR-156). ANY is no window. */
 	public void set_window(TimeWindow window)
 	{
 		d_window = window;
@@ -180,7 +182,7 @@ public class ReflogList : Object
 		d_filter.refilter();
 	}
 
-	/** Cap the list to the newest `count` entries (FR-157); 0 is no cap. */
+	/** Limits the list to the newest `count` entries (FR-157). 0 is no limit. */
 	public void set_count(uint count)
 	{
 		d_count = count;
@@ -188,17 +190,17 @@ public class ReflogList : Object
 		d_filter.refilter();
 	}
 
-	/** Whether a time window or an entry cap is in force (FR-161). */
+	/** Says if a time window or an entry limit is active (FR-161). */
 	public bool has_active_limit()
 	{
 		return d_window != TimeWindow.ANY || d_count != 0;
 	}
 
 	/**
-	 * Recompute which rows are visible under the current limits (IC-160).
+	 * Computes again which rows are visible with the current limits (IC-160).
 	 *
-	 * The window is measured against the present time on each call (FR-163);
-	 * there is no timer, so this is the only place "now" is read.
+	 * Each call measures the window against the present time (FR-163). There
+	 * is no timer, thus this is the only location that reads "now".
 	 */
 	private void recompute_visible()
 	{
@@ -209,24 +211,24 @@ public class ReflogList : Object
 		                                 d_filter_text);
 	}
 
-	/** The filtered model the view shows, for the search tests. */
+	/** The filtered model that the view shows, for the search tests. */
 	public Gtk.TreeModel filtered_model
 	{
 		get { return d_filter; }
 	}
 
-	/** The number of rows currently visible after filtering. */
+	/** The number of rows visible now, after the filter. */
 	public int visible_count()
 	{
 		return d_filter.iter_n_children(null);
 	}
 
 	/**
-	 * The store row a filtered path points at, or -1.
+	 * The store row that a filtered path points at, or -1.
 	 *
-	 * The view works in filtered paths; d_entries and the annotation arrays
-	 * are indexed by store row. Everything that takes a path from the view
-	 * goes through here first.
+	 * The view uses filtered paths. d_entries and the annotation arrays use
+	 * the store row as the index. Each method that takes a path from the view
+	 * calls this method first.
 	 */
 	private int store_index(Gtk.TreePath path)
 	{
@@ -253,8 +255,8 @@ public class ReflogList : Object
 
 	private void build_columns()
 	{
-		// The gutter. Fixed width, no title: it is a margin that means
-		// something, not a data column.
+		// The gutter. It has a fixed width and no title, because it is a
+		// margin with data, and not a data column.
 		d_gutter = new CellRendererOperations();
 
 		var gutter_column = new Gtk.TreeViewColumn();
@@ -277,15 +279,16 @@ public class ReflogList : Object
 			renderer.position = (OperationPosition)((int)position);
 			renderer.colour_index = (int)colour;
 		});
-		// The plan tint runs the whole row, this cell included (FR-151).
+		// The plan tint covers the full row, and this cell (FR-151).
 		gutter_column.add_attribute(d_gutter, "cell-background", ReflogColumn.PLAN_BG);
 
 		d_view.append_column(gutter_column);
 
-		// The Branch chip, `all` view only (P-FR-16). A filled rounded pill
-		// matching the graph's ref pills, rather than a text cell with a
-		// background: gitg's labels are pills, and a full-cell colour block
-		// reads as a table highlight instead of as a label.
+		// The Branch chip, in the `all` view only (P-FR-16). It is a filled
+		// round pill that agrees with the ref pills of the graph. It is not a
+		// text cell with a background. The labels of gitg are pills, and a
+		// full-cell colour block looks like a table highlight and not like a
+		// label.
 		d_branch_renderer = new CellRendererBranch();
 
 		d_branch_column = new Gtk.TreeViewColumn();
@@ -310,10 +313,10 @@ public class ReflogList : Object
 
 		d_view.append_column(d_branch_column);
 
-		// SHA renders in monospace, since a hash reads best fixed-width; Message,
-		// Date and Selector use the default font like the rest of the UI.
-		// Message expands and ellipsises; the others size to content (FR-147,
-		// P-FR-13).
+		// SHA renders in monospace, because a hash is easiest to read in a
+		// fixed width. Message, Date and Selector use the default font, as the
+		// remainder of the UI does. Message expands and adds an ellipsis. The
+		// others fit their content (FR-147, P-FR-13).
 		d_sha_renderer = new Gtk.CellRendererText();
 		d_sha_renderer.family = "monospace";
 
@@ -335,8 +338,8 @@ public class ReflogList : Object
 			"cell-background", ReflogColumn.PLAN_BG);
 		d_message_column.sizing = Gtk.TreeViewColumnSizing.FIXED;
 		d_message_column.resizable = true;
-		// Message keeps expanding to fill the width left over; its fixed_width
-		// is only the floor it will not shrink below, so it is not fitted.
+		// Message continues to expand and fills the remaining width. Its
+		// fixed_width is only the minimum width, thus it is not fitted.
 		d_message_column.expand = true;
 		d_message_column.fixed_width = 400;
 		d_view.append_column(d_message_column);
@@ -365,17 +368,18 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * Fill the list from a ref's reflog.
+	 * Fills the list from the reflog of a ref.
 	 *
 	 * `show_branches` is true only in the `all` view, where entries can come
-	 * from different branches; in a branch or stash view every entry belongs
-	 * to the same ref and the column would say the same thing on every row.
+	 * from different branches. In a branch view or a stash view, each entry
+	 * belongs to the same ref, and the column would give the same text on each
+	 * row.
 	 *
-	 * `colours` maps a branch to the palette index the graph gives it (FR-153).
-	 * `plan` is the current reset plan, so rows already in it are tinted
-	 * (FR-151); both may be null before a repository is set. `view_branch` is
-	 * the branch a branch-view's rows belong to, or null in the `all` and
-	 * `stash` views.
+	 * `colours` maps a branch to the palette index that the graph gives it
+	 * (FR-153). `plan` is the current reset plan, thus the code tints the rows
+	 * that are already in it (FR-151). The two can be null before the code
+	 * sets a repository. `view_branch` is the branch of the rows of a branch
+	 * view, or null in the `all` and `stash` views.
 	 */
 	public void populate(Gee.List<ReflogEntry> entries,
 	                     string? current_branch,
@@ -391,9 +395,10 @@ public class ReflogList : Object
 		d_plan = plan;
 		d_view_branch = view_branch;
 
-		// Judge visibility before the rows go in, so the filter's per-row
-		// callback reads a d_visible that already covers them. The current
-		// limits persist across a populate (FR-161), so a reload keeps them.
+		// Decide the visibility before the rows go in. Thus the callback of
+		// the filter for each row reads a d_visible that includes them. The
+		// current limits stay after a populate (FR-161), thus a reload keeps
+		// them.
 		recompute_visible();
 
 		d_branch_column.visible = show_branches;
@@ -404,8 +409,9 @@ public class ReflogList : Object
 		{
 			var entry = entries[i];
 
-			// The colour is the branch's slot in the graph's lane walk, so a
-			// branch looks the same in the list and the graph (FR-153).
+			// The colour is the position of the branch in the lane walk of
+			// the graph. Thus a branch looks the same in the list and in the
+			// graph (FR-153).
 			var branch = d_branches[i];
 			var colour = branch != null && colours != null && colours.has_key(branch)
 				? colours[branch] : -1;
@@ -429,11 +435,11 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * Re-tint the rows from the current plan, without repopulating (FR-151).
+	 * Tints the rows again from the current plan, with no repopulate (FR-151).
 	 *
-	 * Called when the plan changes under a shown reflog. The plan is keyed by
-	 * branch and commit, so the tint follows the identity of the planned row,
-	 * not a position.
+	 * The code calls this method when the plan changes under a shown reflog.
+	 * The key of the plan is the branch and the commit. Thus the tint follows
+	 * the identity of the planned row, and not a position.
 	 */
 	public void refresh_plan_marks()
 	{
@@ -455,11 +461,11 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * The tint for the store row at `index`, or null when it is not planned.
+	 * The tint for the store row at `index`, or null if the row is not planned.
 	 *
-	 * A wash of the branch's colour at low alpha, parsed by GTK from an
-	 * `rgba()` string. Null leaves the cell-background unset, so an unplanned
-	 * row carries the theme's own background.
+	 * It is a wash of the colour of the branch at a low alpha. GTK parses it
+	 * from an `rgba()` string. Null leaves the cell-background unset, thus an
+	 * unplanned row has the background of the theme.
 	 */
 	private string? plan_tint(int index)
 	{
@@ -473,8 +479,8 @@ public class ReflogList : Object
 			return null;
 		}
 
-		// A branch view's rows all belong to that branch; only the `all` view
-		// attributes them per row (FR-148, and see d_view_branch).
+		// All rows of a branch view belong to that branch. Only the `all` view
+		// attributes them for each row (FR-148, and refer to d_view_branch).
 		var branch = d_view_branch != null ? d_view_branch : d_branches[index];
 		var commit = d_entries[index].new_id;
 
@@ -501,13 +507,15 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * Size each data column to fit its content, once, on populate (FR-147).
+	 * Sets each data column to fit its content, one time, on a populate
+	 * (FR-147).
 	 *
-	 * The list runs in fixed-height mode, which requires columns to be FIXED
-	 * sizing, so the fit is a measurement rather than AUTOSIZE: each column's
-	 * widest cell is measured through the renderer that draws it, and its
-	 * fixed_width set to that. The user can drag from there (resizable). The
-	 * Message column is left expanding; the gutter is a fixed margin.
+	 * The list runs in fixed-height mode, which needs FIXED sizing for the
+	 * columns. Thus the fit is a measurement and not AUTOSIZE. The code
+	 * measures the widest cell of each column through the renderer that draws
+	 * it, and sets fixed_width to that value. The user can then drag the
+	 * column, because it is resizable. The Message column continues to expand.
+	 * The gutter is a fixed margin.
 	 */
 	private void fit_columns(bool show_branches)
 	{
@@ -591,10 +599,11 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * The width a column header needs for its title.
+	 * The width that a column header needs for its title.
 	 *
-	 * So a fitted column is never narrower than its own heading. Measured off
-	 * the view's font, with slack for the header button's padding.
+	 * Thus a fitted column is never more narrow than its own heading. The code
+	 * measures it with the font of the view, and adds extra width for the
+	 * padding of the header button.
 	 */
 	private int header_width(string title)
 	{
@@ -620,13 +629,13 @@ public class ReflogList : Object
 		get { return d_branch_column.fixed_width; }
 	}
 
-	/** Whether the data columns are user-resizable, for the FR-147 tests. */
+	/** Says if the user can resize the data columns, for the FR-147 tests. */
 	public bool columns_resizable
 	{
 		get { return d_branch_column.resizable && d_sha_column.resizable; }
 	}
 
-	/** Whether the store row at `index` carries the plan tint, for the tests. */
+	/** Says if the store row at `index` has the plan tint, for the tests. */
 	public bool row_is_tinted(int index)
 	{
 		return plan_tint(index) != null;
@@ -640,12 +649,13 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * How long ago an entry happened, worded as gitg words it (P-FR-11).
+	 * The time since an entry occurred, in the words of gitg (P-FR-11).
 	 *
-	 * This uses Gitg.Date.for_display() rather than the wording the Python
-	 * implementation computed. gitg says "Half an hour ago" and "A minute
-	 * ago" where the Python said "30 minutes ago" and "1 minute ago"; since
-	 * the point of the rewrite is to look like gitg, gitg's own wording wins.
+	 * This method uses Gitg.Date.for_display(), and not the words that the
+	 * Python implementation computed. gitg gives "Half an hour ago" and "A
+	 * minute ago" where the Python gave "30 minutes ago" and "1 minute ago".
+	 * The purpose of the rewrite is to look like gitg, thus the words of gitg
+	 * have priority.
 	 */
 	private string format_date(DateTime? when)
 	{
@@ -658,12 +668,11 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * The view path for a store row, or null when the filter hides it.
+	 * The view path for a store row, or null if the filter hides it.
 	 *
-	 * The activity selects rows by store index (a reload matches an entry by
-	 * hash, then wants to reselect it); with a filter active that index has
-	 * to be mapped forward to a filtered path, and the row may not be visible
-	 * at all.
+	 * The activity selects rows by store index. A reload finds an entry by
+	 * hash, then selects it again. With an active filter, the code must map
+	 * that index forward to a filtered path, and the row can be invisible.
 	 */
 	public Gtk.TreePath? view_path_for(int store_row)
 	{
@@ -710,7 +719,7 @@ public class ReflogList : Object
 	}
 
 	/**
-	 * A tooltip naming the operation kind of a row (P-FR-15).
+	 * A tooltip that names the operation kind of a row (P-FR-15).
 	 */
 	public string? tooltip_at(Gtk.TreePath path)
 	{

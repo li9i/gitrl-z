@@ -18,12 +18,12 @@ namespace Gitrlz
 {
 
 /**
- * Where a row sits within a multi-step operation (spec P-FR-15).
+ * The position of a row in a multi-step operation (spec P-FR-15).
  *
- * Everything is SINGLE except inside a rebase, which git records as an
- * explicit run: the oldest row is START, the newest END, any rows between
- * are MIDDLE. A run of one row stays SINGLE, because a bracket needs at
- * least two rows to bracket.
+ * Each row is SINGLE, except the rows in a rebase, which git records as an
+ * explicit run. In a run, the oldest row is START, the newest row is END, and
+ * the rows between them are MIDDLE. A run of one row stays SINGLE, because a
+ * bracket needs a minimum of two rows.
  */
 public enum OperationPosition
 {
@@ -43,19 +43,19 @@ public struct Operation
 /**
  * Analysis of reflog messages: which operation, and which branch.
  *
- * Everything here is pure. It reads the message strings git writes,
- * described by IC-8, and calls neither Ggit nor GTK, which is what makes the
- * reflog list's annotations straightforward to test.
+ * All code here is pure. It reads the message strings that git writes, which
+ * IC-8 describes. It calls neither Ggit nor GTK. Thus the annotations of the
+ * reflog list are easy to test.
  *
- * Ported from the Python implementation's gitrlz/reflog.py, which — together
- * with tests/test_annotations.py — is the specification of this behaviour.
- * The message forms are unchanged by the move to libgit2:
- * Ggit.ReflogEntry.get_message() returns exactly what %gs produced.
+ * This code comes from gitrlz/reflog.py of the Python implementation. That
+ * file and tests/test_annotations.py are the specification of this behaviour.
+ * The move to libgit2 does not change the message forms.
+ * Ggit.ReflogEntry.get_message() returns the same text as %gs.
  */
 public class ReflogAnnotations : Object
 {
 	/**
-	 * Return the part of a reflog message before the first colon.
+	 * Returns the part of a reflog message before the first colon.
 	 */
 	private static string message_head(string message)
 	{
@@ -67,9 +67,9 @@ public class ReflogAnnotations : Object
 	/**
 	 * The operation kind of a reflog message (IC-8).
 	 *
-	 * The first word before the first colon, lowercased, so `rebase (pick)`
-	 * and `rebase -i (start)` both give `rebase`, and `merge topic` gives
-	 * `merge`.
+	 * The result is the first word before the first colon, in lower case. Thus
+	 * `rebase (pick)` and `rebase -i (start)` both give `rebase`, and `merge
+	 * topic` gives `merge`.
 	 */
 	public static string operation_kind(string message)
 	{
@@ -87,7 +87,7 @@ public class ReflogAnnotations : Object
 	}
 
 	/**
-	 * True when text looks like an abbreviated or full hash.
+	 * True if the text has the form of an abbreviated hash or a full hash.
 	 */
 	private static bool is_hash(string text)
 	{
@@ -108,10 +108,10 @@ public class ReflogAnnotations : Object
 	}
 
 	/**
-	 * (from, to) for a checkout reflog message, else false (IC-8).
+	 * Gives (from, to) for a checkout reflog message, or false (IC-8).
 	 *
-	 * A ref name cannot contain a space, so the last " to " in the body
-	 * separates the two names.
+	 * A ref name cannot contain a space. Thus the last " to " in the body
+	 * divides the two names.
 	 */
 	private static bool checkout_move(string message, out string from, out string to)
 	{
@@ -155,7 +155,7 @@ public class ReflogAnnotations : Object
 	}
 
 	/**
-	 * The branch a rebase finish or abort returns to, else null.
+	 * The branch that a rebase finish or abort returns to, or null.
 	 */
 	private static string? rebase_return(string message)
 	{
@@ -172,9 +172,9 @@ public class ReflogAnnotations : Object
 	}
 
 	/**
-	 * Classify every entry as (kind, position) (IC-8, P-FR-15).
+	 * Classifies each entry as (kind, position) (IC-8, P-FR-15).
 	 *
-	 * `entries` arrives newest first, as git prints a reflog.
+	 * `entries` is newest first, as git prints a reflog.
 	 */
 	public static Operation[] classify_operations(Gee.List<ReflogEntry> entries)
 	{
@@ -189,8 +189,8 @@ public class ReflogAnnotations : Object
 			};
 		}
 
-		// Walk oldest to newest, which is how a run reads: a rebase starts
-		// at the oldest of its rows.
+		// Walk from the oldest to the newest, which is the order of a run.
+		// A rebase starts at its oldest row.
 		var cursor = count - 1;
 
 		while (cursor >= 0)
@@ -238,16 +238,17 @@ public class ReflogAnnotations : Object
 	}
 
 	/**
-	 * The branch HEAD was on for each entry, or null (IC-8, P-FR-16).
+	 * The branch of HEAD for each entry, or null (IC-8, P-FR-16).
 	 *
-	 * `entries` arrives newest first. Walking oldest to newest, a checkout
-	 * moves HEAD to its target and a rebase finish returns it to the named
-	 * branch. A target that is a bare hash means a detached HEAD and gives
-	 * null. Entries before the first checkout take that checkout's from
-	 * branch, or `default_branch` when the reflog holds no checkout at all.
+	 * `entries` is newest first. In a walk from the oldest to the newest, a
+	 * checkout moves HEAD to its target, and a rebase finish returns HEAD to
+	 * the named branch. If the target is a bare hash, HEAD is detached and the
+	 * result is null. Entries before the first checkout take the from branch
+	 * of that checkout. If the reflog has no checkout, they take
+	 * `default_branch`.
 	 *
-	 * A rebase replays with HEAD detached, so every entry of a rebase run is
-	 * attributed to the branch the run returns to.
+	 * A rebase replays with a detached HEAD. Thus each entry of a rebase run
+	 * gets the branch that the run returns to.
 	 */
 	public static string?[] attribute_branches(Gee.List<ReflogEntry> entries,
 	                                           string? default_branch = null)
@@ -260,8 +261,9 @@ public class ReflogAnnotations : Object
 			return result;
 		}
 
-		// Seed from the oldest checkout's "from" branch: entries older than
-		// the first checkout belong to whatever HEAD was on before it.
+		// Start from the "from" branch of the oldest checkout. Entries older
+		// than the first checkout belong to the branch that HEAD was on
+		// before that checkout.
 		string? current = default_branch;
 
 		for (var i = count - 1; i >= 0; i--)
@@ -298,8 +300,8 @@ public class ReflogAnnotations : Object
 			result[i] = current;
 		}
 
-		// A rebase replays detached, so its rows would otherwise be
-		// attributed to nothing. Give the whole run the branch it returns to.
+		// A rebase replays with a detached HEAD. Thus its rows would get no
+		// branch. Give the full run the branch that it returns to.
 		var operations = classify_operations(entries);
 		var run = new Gee.ArrayList<int>();
 

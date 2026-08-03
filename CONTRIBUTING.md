@@ -2,13 +2,13 @@
 
 ## Provenance
 
-`gitrl-z` vendors a subtree of gitg 44's source under `src/vendor-gitg/`. The commit graph in the preview pane is not a lookalike: it is gitg's own `CommitListView` and lane renderer, drawing the whole tree with one branch's label moved to where a reset would put it.
+`gitrl-z` vendors a subtree of the gitg 44 source under `src/vendor-gitg/`. The commit graph in the preview pane is the `CommitListView` and lane renderer of gitg. It draws the full tree with the label of one branch at the position a reset would give it.
 
-`vendor/PROVENANCE` records exactly what was vendored, and the evidence that it is byte-for-byte the source Ubuntu's `gitg 44-1build2` was built from. `vendor/patches/` records every deviation, with a rationale for each.
+`vendor/PROVENANCE` records what the project vendors. It also gives the evidence that the source is byte-for-byte the source that Ubuntu built `gitg 44-1build2` from. `vendor/patches/` records each deviation and the cause of it.
 
-## Building from source
+## Build from source
 
-Needs Ubuntu 24.04 or equivalent:
+Ubuntu 24.04 or equivalent is necessary:
 
 ```bash
 sudo apt-get install build-essential desktop-file-utils \
@@ -21,7 +21,7 @@ ninja -C _build
 ./scripts/dev.sh run
 ```
 
-`scripts/dev.sh` wraps the common tasks (`build`, `test`, `run`, `clean`). Setting `GITRLZ_DOCKER=1` runs any of them inside the build container instead, which is useful if you would rather not install the toolchain.
+`scripts/dev.sh` contains the common tasks (`build`, `test`, `run`, `clean`). If you set `GITRLZ_DOCKER=1`, each task runs in the build container. Use this if you do not want to install the toolchain on the host.
 
 ## Tests
 
@@ -30,7 +30,7 @@ ninja -C _build
 ./scripts/dev.sh test unit         # data layer only, no display needed
 ```
 
-The `ui` suite drives real widgets under Xvfb. The `visual` suite compares lane geometry against the installed gitg and is off by default (`-Dvisual_tests=true`), since it needs an X server and gitg itself.
+The `ui` suite drives real widgets in Xvfb. The `visual` suite compares the lane geometry with the installed gitg. It is off by default (`-Dvisual_tests=true`), because it needs an X server and gitg.
 
 ## Packaging
 
@@ -43,15 +43,15 @@ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
 ./tests/packaging/test-install.sh
 ```
 
-The container installs only the declared `Build-Depends`, so building there is what proves that list complete, the same check a Launchpad buildd performs.
+The container installs only the declared `Build-Depends`. Thus a successful build in the container is the proof that the list is complete. A Launchpad buildd makes the same check.
 
 ## AppImage
 
-A portable single file that runs on most distributions with no install and no root:
+One portable file that runs on most distributions. It needs no installation and no root access:
 
 ```bash
 ./scripts/build-appimage.sh
 # -> gitrl-z-0.1.0-x86_64.AppImage
 ```
 
-`linuxdeploy` and its GTK plugin bundle GTK 3, its modules and theme, the GSettings schema, and the app's own libraries into the file, so it runs on a machine that has none of them.
+`linuxdeploy` and its GTK plug-in put GTK 3 into the file, with the GTK modules and theme, the GSettings schema, and the libraries of the application. Thus the file runs on a machine that has none of them.

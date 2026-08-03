@@ -20,21 +20,22 @@ namespace Gitrlz
 /**
  * The Branch chip in the reflog list (spec P-FR-16, FR-123).
  *
- * A filled rounded pill in the branch's colour with light text, matching the
- * ref pills gitg's graph draws, so a branch reads the same in both panes.
+ * A filled round pill in the colour of the branch, with light text. It agrees
+ * with the ref pills that the graph of gitg draws. Thus a branch looks the
+ * same in the two panes.
  *
- * Why not Gitg.LabelRenderer, which draws those pills: its draw() takes a
- * SList<Gitg.Ref>, and the chip has to render for branches that no longer
- * exist as refs — a reflog outlives the branch it describes, and showing the
- * name of a deleted branch is much of the point. So the geometry is
- * reproduced here instead.
+ * Gitg.LabelRenderer draws those pills, but this class does not use it. Its
+ * draw() takes a SList<Gitg.Ref>, and the chip must render branches that no
+ * longer exist as refs. A reflog stays after the branch that it describes,
+ * and the name of a deleted branch is important data. Thus this class
+ * reproduces the geometry.
  *
- * The geometry is not invented. It is what the Python implementation
- * measured off gitg at magnification and recorded in P-FR-21: corners
- * rounded by 4 px, read from the corner's pixel profile (an inset sequence
- * of 4, 2, 1, 1, 0, which is what a 4 px circle produces); text at roughly
- * 83 per cent of the body size, at normal weight rather than bold; and no
- * border at all.
+ * The Python implementation measured the geometry from gitg at magnification
+ * and recorded it in P-FR-21. The corners have a 4 px radius, read from the
+ * pixel profile of the corner. That profile is an inset sequence of
+ * 4, 2, 1, 1, 0, which a 4 px circle produces. The text is at approximately
+ * 83 per cent of the body size, at normal weight and not bold. There is no
+ * border.
  */
 public class CellRendererBranch : Gtk.CellRenderer
 {
@@ -110,8 +111,9 @@ public class CellRendererBranch : Gtk.CellRenderer
 	                            Gdk.Rectangle cell_area,
 	                            Gtk.CellRendererState flags)
 	{
-		// An entry whose branch cannot be determined, including one from a
-		// stretch where HEAD was detached, leaves the cell empty (P-FR-16).
+		// If the branch of an entry is unknown, the cell stays empty
+		// (P-FR-16). This includes an entry from a period with a detached
+		// HEAD.
 		if (branch == null || branch == "" || colour_index < 0)
 		{
 			return;
@@ -126,8 +128,8 @@ public class CellRendererBranch : Gtk.CellRenderer
 		var pill_width = w + PADDING_X * 2;
 		var pill_height = double.max(h + 2, cell_area.height - MARGIN_Y * 2);
 
-		// Left-justified against the cell's leading edge, so the names read
-		// down a straight column rather than floating in the middle of it.
+		// Left-justified against the leading edge of the cell. Thus the
+		// names make a straight column.
 		var x = (double)cell_area.x;
 		var y = cell_area.y + (cell_area.height - pill_height) / 2.0;
 
@@ -139,8 +141,8 @@ public class CellRendererBranch : Gtk.CellRenderer
 		cr.set_source_rgb(colour.r, colour.g, colour.b);
 		cr.fill();
 
-		// Light text, as gitg's labels have. No border: measured against
-		// gitg, its labels carry none.
+		// Light text, as the labels of gitg have. No border: a measurement
+		// against gitg shows that its labels have none.
 		cr.set_source_rgb(1.0, 1.0, 1.0);
 		cr.move_to(x + PADDING_X, y + (pill_height - h) / 2.0);
 		Pango.cairo_show_layout(cr, layout);
