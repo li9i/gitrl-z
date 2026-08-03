@@ -413,6 +413,115 @@ private static void test_preview_keeps_the_tree_and_moves_the_branch()
 	}
 }
 
+private static void test_start_mark_sits_on_the_opening_commit()
+{
+	// The graph marks where the user was standing when the window opened, so
+	// that a planned reset shows the distance it would travel from there.
+	try
+	{
+		var repo = Repo.create();
+
+		repo.commit("first");
+		var second = repo.commit("second");
+
+		var paned = activity_for(repo);
+		var second_oid = new Ggit.OId.from_string(second);
+
+		assert_true(has_label(paned.preview_labels_for(second_oid), "where you started"));
+
+		// It is the opening position and not the current one, so a reset
+		// planned in the window leaves it where it is.
+		var first_oid = new Ggit.OId.from_string(repo.git({"rev-parse", "HEAD~1"}).strip());
+		assert_true(paned.toggle_entry(paned.list.entries.size - 1));
+		assert_true(has_label(paned.preview_labels_for(second_oid), "where you started"));
+		assert_false(has_label(paned.preview_labels_for(first_oid), "where you started"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_start_mark_survives_a_reset_outside_the_window()
+{
+	// The case the mark exists for: a hard reset in a terminal beside the
+	// window leaves the opening commit with no ref reaching it. The graph must
+	// still draw that commit, and the mark must still be on it.
+	try
+	{
+		var repo = Repo.create();
+
+		var first = repo.commit("first");
+		repo.commit("second");
+		var third = repo.commit("third");
+
+		var paned = activity_for(repo);
+
+		repo.reset(first);
+		paned.reload();
+
+		// main is back at `first`, and nothing reaches `third` any more. It is
+		// in the tip set regardless, so the row stays on screen.
+		assert_true(includes_oid(paned.included_tips, first));
+		assert_true(includes_oid(paned.included_tips, third));
+
+		var third_oid = new Ggit.OId.from_string(third);
+		assert_true(has_label(paned.preview_labels_for(third_oid), "where you started"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_graph_pills_follow_a_ref_change_outside_the_window()
+{
+	// Gitg.Repository caches the ref-to-commit map on first use, so a reload
+	// that does not clear it draws every branch pill where the branch was when
+	// the window opened. The reflog list updates and the graph does not, which
+	// reads as gitrl-z reporting a reset it can see in the list.
+	try
+	{
+		var repo = Repo.create();
+
+		var first = repo.commit("first");
+		repo.commit("second");
+		var third = repo.commit("third");
+
+		var paned = activity_for(repo);
+
+		var first_oid = new Ggit.OId.from_string(first);
+		var third_oid = new Ggit.OId.from_string(third);
+
+		assert_true(has_label(paned.preview_labels_for(third_oid), "main"));
+
+		// A hard reset in a terminal beside the window.
+		repo.reset(first);
+		paned.reload();
+
+		// main is drawn where it is now, and not where it was at open.
+		assert_true(has_label(paned.preview_labels_for(first_oid), "main"));
+		assert_false(has_label(paned.preview_labels_for(third_oid), "main"));
+
+		// The commit the session started on keeps its mark, and now carries
+		// nothing else: no ref reaches it any more.
+		assert_true(has_label(paned.preview_labels_for(third_oid), "where you started"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_preview_writes_nothing()
 {
 	// NFR-4, the guarantee the whole product rests on. Building previews for
@@ -1621,6 +1730,9 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/detached-head-offers-way-back", test_detached_head_offers_the_way_back);
 	Test.add_func("/gitrlz/activity/preview-keeps-tree-moves-branch", test_preview_keeps_the_tree_and_moves_the_branch);
 	Test.add_func("/gitrlz/activity/preview-writes-nothing", test_preview_writes_nothing);
+	Test.add_func("/gitrlz/activity/graph-pills-follow-ref-change", test_graph_pills_follow_a_ref_change_outside_the_window);
+	Test.add_func("/gitrlz/activity/start-mark-on-opening-commit", test_start_mark_sits_on_the_opening_commit);
+	Test.add_func("/gitrlz/activity/start-mark-survives-reset", test_start_mark_survives_a_reset_outside_the_window);
 	Test.add_func("/gitrlz/activity/empty-reflog-placeholder", test_empty_reflog_shows_placeholder);
 	Test.add_func("/gitrlz/activity/reload-preserves-plan", test_reload_preserves_the_plan);
 	Test.add_func("/gitrlz/activity/reload-drops-stale", test_reload_drops_a_stale_plan_entry);

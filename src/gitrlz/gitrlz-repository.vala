@@ -258,6 +258,29 @@ public class Repository : Object
 	}
 
 	/**
+	 * The commit that HEAD points at, or null if HEAD is unborn.
+	 *
+	 * This resolves HEAD to a commit and does not care whether it is on a
+	 * branch or detached. A repository with no commits has no HEAD to resolve,
+	 * and gives null. The reflog activity reads this one time, when it opens a
+	 * repository, to mark the position that the user started from.
+	 */
+	public static Ggit.OId? head_commit(Gitg.Repository repository)
+	{
+		try
+		{
+			var head = repository.get_head();
+
+			return head != null ? head.get_target() : null;
+		}
+		catch (Error e)
+		{
+			// An unborn HEAD throws here, and has no commit to name.
+			return null;
+		}
+	}
+
+	/**
 	 * Local branch tips, name to commit id (IC-104).
 	 *
 	 * The reset preview substitutes into this set (FR-124).

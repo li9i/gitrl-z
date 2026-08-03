@@ -206,6 +206,31 @@ private static void test_tips_dedupe_a_target_that_is_already_a_tip()
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
 
+private static void test_tips_keep_the_commit_the_session_started_on()
+{
+	try
+	{
+		var t = tips({"main", A});
+		var plan = new Gitrlz.ResetPlan();
+
+		// A reset in a terminal moved main from B down to A, so nothing reaches
+		// B any more. The graph must still draw it: it is the position the
+		// window opened on.
+		var result = Gitrlz.ResetPreview.preview_tips(t, plan, oid(B));
+
+		assert_cmpint(result.length, CompareOperator.EQ, 2);
+		assert_true(contains_oid(result, oid(A)));
+		assert_true(contains_oid(result, oid(B)));
+
+		// An untouched session started on the tip it is still on, so the set is
+		// the real tips and the graph is unchanged.
+		var untouched = Gitrlz.ResetPreview.preview_tips(t, plan, oid(A));
+		assert_cmpint(untouched.length, CompareOperator.EQ, 1);
+		assert_true(contains_oid(untouched, oid(A)));
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
 private static void test_target_branch_view_uses_the_view()
 {
 	try
@@ -269,6 +294,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/reset-preview/command-absent-recreated", test_command_absent_branch_is_recreated);
 	Test.add_func("/gitrlz/reset-preview/tips-keep-tree", test_tips_keep_the_tree_and_add_targets);
 	Test.add_func("/gitrlz/reset-preview/tips-dedupe-target", test_tips_dedupe_a_target_that_is_already_a_tip);
+	Test.add_func("/gitrlz/reset-preview/tips-keep-start", test_tips_keep_the_commit_the_session_started_on);
 	Test.add_func("/gitrlz/reset-preview/target-branch-view", test_target_branch_view_uses_the_view);
 	Test.add_func("/gitrlz/reset-preview/target-all-view", test_target_all_view_uses_the_row_branch);
 	Test.add_func("/gitrlz/reset-preview/target-branchless", test_target_branchless_row_is_not_togglable);

@@ -75,12 +75,21 @@ public class ResetPreview : Object
 	 * commits the graph draws. The activity moves the label of a planned
 	 * branch onto its target, and this method does not.
 	 *
+	 * `opened_at` is the commit that HEAD was on when gitrl-z opened the
+	 * repository, and it joins the set for the same cause as a planned target.
+	 * A reset that ran in a terminal beside the window can leave that commit
+	 * with no ref that reaches it. The graph would then stop drawing the
+	 * position that the session started from, which is the one position the
+	 * user is most likely to want again. In an untouched session it is already
+	 * a branch tip, thus it adds nothing and the graph is unchanged.
+	 *
 	 * The method removes duplicates by commit. Thus two branches with the same
 	 * tip, or a target that is already a tip, do not give the walker the same
 	 * commit two times.
 	 */
 	public static Ggit.OId[] preview_tips(Gee.Map<string, Ggit.OId> tips,
-	                                      ResetPlan plan)
+	                                      ResetPlan plan,
+	                                      Ggit.OId? opened_at = null)
 	{
 		Ggit.OId[] result = {};
 
@@ -100,6 +109,11 @@ public class ResetPreview : Object
 			{
 				result += target;
 			}
+		}
+
+		if (opened_at != null && !contains_oid(result, opened_at))
+		{
+			result += opened_at;
 		}
 
 		return result;

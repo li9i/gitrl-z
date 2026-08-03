@@ -88,6 +88,22 @@ public class ReflogPaned : Gtk.Paned
 	private Gee.Map<string, Ggit.OId> d_tips;
 	private string? d_current_branch;
 
+	/**
+	 * The commit that HEAD was on when this window opened the repository, or
+	 * null if HEAD was unborn.
+	 *
+	 * The preview draws a pill at this commit, and its tip set keeps the commit
+	 * drawn. Thus you can always see the position that you started from, and
+	 * how far a planned reset would move you from it.
+	 *
+	 * The code reads this one time, in the repository setter. A reload must not
+	 * move it: the value is the position at open, and the reflog grows under an
+	 * open window whenever you run git in a terminal beside it. A new
+	 * repository takes a new reading, because the position of the previous one
+	 * has no meaning here.
+	 */
+	private Ggit.OId? d_opened_at;
+
 	/** The branch-to-colour map for the current tips (FR-153). */
 	private Gee.Map<string, int> d_colours;
 
@@ -310,6 +326,13 @@ public class ReflogPaned : Gtk.Paned
 		set
 		{
 			d_repository = value;
+
+			// Where the user was standing when the window opened this
+			// repository (refer to d_opened_at). This is before reload(), thus
+			// the first preview already draws the mark.
+			d_opened_at = d_repository != null
+				? Repository.head_commit(d_repository)
+				: null;
 
 			// A new repository starts with an empty plan. The branches of the
 			// previous repository have no meaning here. The graph columns
@@ -653,6 +676,14 @@ public class ReflogPaned : Gtk.Paned
 		{
 			return;
 		}
+
+		// Gitg.Repository builds its ref-to-commit map on the first lookup and
+		// keeps it. That map is the source of every pill that the graph draws
+		// at a commit with no override. Thus without this call, a ref that
+		// changed outside the window keeps its pill at the position it had when
+		// the window opened, while the reflog list above shows the change. The
+		// two panes then disagree, and the graph is the one that is wrong.
+		d_repository.clear_refs_cache();
 
 		d_branches = Repository.list_branches(d_repository);
 		d_tips = Repository.branch_tips(d_repository);
@@ -1426,6 +1457,18 @@ public class ReflogPaned : Gtk.Paned
 			set_labels_without(from, branch_ref);
 			add_label(target, branch_ref);
 		}
+
+		// The starting point of the session, last, thus it comes after the real
+		// pills of its commit rather than before them.
+		//
+		// The mark is always drawn, also when nothing has moved yet and it sits
+		// beside the pill of the current branch. Then it says that you are
+		// still where you began, and as soon as a plan moves a branch away from
+		// it, the graph shows the distance the reset would travel.
+		if (d_opened_at != null)
+		{
+			add_label(d_opened_at, new SyntheticMarkerRef(_("where you started")));
+		}
 	}
 
 	/** The ref object of the branch at its current position, or null. */
@@ -1509,9 +1552,11 @@ public class ReflogPaned : Gtk.Paned
 	 * Draws the graph that the plan would give, or the current repository.
 	 *
 	 * The tip set keeps the full current tree and adds each planned target
-	 * (FR-150). Thus the commits that a reset would abandon stay visible. With
-	 * an empty plan, the tip set is the real tips, which is the current
-	 * repository tree. rebuild_preview_labels() moves the label of a planned
+	 * (FR-150), plus the commit that the session started on. Thus the commits
+	 * that a reset would abandon stay visible, and so does the position that
+	 * you came from. With an empty plan and an untouched repository, the
+	 * starting commit is still a branch tip and adds nothing, thus the tip set
+	 * is the real tips. rebuild_preview_labels() moves the label of a planned
 	 * branch onto its target. With an empty plan there is no command to run,
 	 * thus there is no banner and no warning, and the caption says that this
 	 * is the present state and not a preview. After the user toggles entries
@@ -1546,7 +1591,7 @@ public class ReflogPaned : Gtk.Paned
 			return;
 		}
 
-		var tips = ResetPreview.preview_tips(d_tips, d_plan);
+		var tips = ResetPreview.preview_tips(d_tips, d_plan, d_opened_at);
 
 		// There are no tips to draw, for example with an unborn HEAD. There is
 		// nothing to show.
