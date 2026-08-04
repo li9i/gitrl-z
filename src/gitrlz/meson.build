@@ -10,6 +10,7 @@ gitrlz_lib_sources = files(
   'gitrlz-branch-colours.vala',
   'gitrlz-dash-view.vala',
   'gitrlz-cell-renderer-branch.vala',
+  'gitrlz-cell-renderer-message.vala',
   'gitrlz-cell-renderer-operations.vala',
   'gitrlz-monitor.vala',
   'gitrlz-preferences-dialog.vala',
@@ -21,6 +22,7 @@ gitrlz_lib_sources = files(
   'gitrlz-reflog-filter.vala',
   'gitrlz-reflog.vala',
   'gitrlz-repository.vala',
+  'gitrlz-session-start.vala',
   'gitrlz-synthetic-ref.vala',
   'gitrlz-window.vala',
 )

@@ -27,23 +27,11 @@ private static void test_synthetic_branch_ref_has_no_native()
 	assert_true(r.parsed_name.rtype == Gitg.RefType.BRANCH);
 }
 
-private static void test_synthetic_marker_ref_is_not_a_branch()
-{
-	// The pill style comes from the ref type alone, so the session mark takes
-	// the tag type: a name pinned to a commit, drawn in a colour no branch
-	// uses. A branch type here would offer the user something to check out.
-	var r = new Gitrlz.SyntheticMarkerRef("where you started");
-
-	assert_cmpstr(r.parsed_name.shortname, CompareOperator.EQ, "where you started");
-	assert_true(r.parsed_name.rtype == Gitg.RefType.TAG);
-}
-
 public static int main(string[] args)
 {
 	Test.init(ref args);
 
 	Test.add_func("/gitrlz/synthetic-ref/no-native", test_synthetic_branch_ref_has_no_native);
-	Test.add_func("/gitrlz/synthetic-ref/marker-not-a-branch", test_synthetic_marker_ref_is_not_a_branch);
 
 	return Test.run();
 }

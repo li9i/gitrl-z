@@ -39,36 +39,6 @@ public class SyntheticBranchRef : Gitg.RefBase
 	}
 }
 
-/**
- * A label at a commit that names no git reference at all.
- *
- * The preview draws this to mark the commit that HEAD was on when gitrl-z
- * opened the repository. It is not a branch, not a tag, and nothing in git
- * knows about it. It is a note about the current session.
- *
- * The ref type is TAG, and the cause is the pill style. Gitg.LabelRenderer
- * takes the CSS class of a pill from the ref type alone, through its private
- * class_from_ref(). The four types give the four classes that style.css
- * colours: branch, remote, tag and stash. Thus a label with no type gets no
- * class, no fill and no border, and renders as loose text beside the real
- * pills. TAG is the one remaining type that already means "a name pinned to a
- * commit that does not move", which is what this mark is. It also draws in a
- * colour that no branch uses, thus the mark cannot be misread as a branch that
- * you could check out.
- *
- * Cost: a real tag on the same commit renders in the same colour. The user
- * then reads two orange pills, one of which is not a tag. The alternative was
- * a patch to the label renderer of gitg, and the vendored closure stays
- * byte-identical instead (NFR-5).
- */
-public class SyntheticMarkerRef : Gitg.RefBase
-{
-	public SyntheticMarkerRef(string text)
-	{
-		d_parsed_name = new Gitg.ParsedRefName("refs/tags/" + text);
-	}
-}
-
 }
 
 // ex:set ts=4 noet:

@@ -100,12 +100,20 @@ public class Reflog : Object
 	 *
 	 * `ref_name` is "HEAD", a local branch name, or "stash".
 	 *
+	 * `limit` is the number of entries to return, and 0 is the whole log. A
+	 * caller that wants only the position a ref is at, and not its history,
+	 * asks for one entry and does not pay for a long log (IC-169). The `index`
+	 * of each entry stays its true position in the log, thus a limited read
+	 * still gives `HEAD@{0}` and not a renumbered entry.
+	 *
 	 * If a ref does not resolve, the result is an empty list and no error.
 	 * Examples are an unborn HEAD, a branch deleted a short time before, and a
 	 * repository with no stash. IC-4 specifies this, and the placeholder in
 	 * P-FR-14 needs it.
 	 */
-	public static Gee.List<ReflogEntry> read(Gitg.Repository repository, string ref_name)
+	public static Gee.List<ReflogEntry> read(Gitg.Repository repository,
+	                                         string ref_name,
+	                                         uint limit = 0)
 	{
 		var entries = new Gee.ArrayList<ReflogEntry>();
 
@@ -171,6 +179,11 @@ public class Reflog : Object
 			}
 
 			var count = log.get_entry_count();
+
+			if (limit != 0 && limit < count)
+			{
+				count = limit;
+			}
 
 			for (uint i = 0; i < count; i++)
 			{

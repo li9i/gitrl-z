@@ -92,9 +92,10 @@ public class ReflogPaned : Gtk.Paned
 	 * The commit that HEAD was on when this window opened the repository, or
 	 * null if HEAD was unborn.
 	 *
-	 * The preview draws a pill at this commit, and its tip set keeps the commit
-	 * drawn. Thus you can always see the position that you started from, and
-	 * how far a planned reset would move you from it.
+	 * The tip set of the preview keeps this commit drawn (FR-169). A reset run
+	 * in a terminal beside the window can leave it with no ref that reaches it,
+	 * and the graph must still show the position that you came from. The reflog
+	 * list says which entry that was, and the graph carries no label for it.
 	 *
 	 * The code reads this one time, in the repository setter. A reload must not
 	 * move it: the value is the position at open, and the reflog grows under an
@@ -103,6 +104,17 @@ public class ReflogPaned : Gtk.Paned
 	 * has no meaning here.
 	 */
 	private Ggit.OId? d_opened_at;
+
+	/**
+	 * The newest entry of each reflog when this window opened the repository,
+	 * or null before there is a repository (FR-170).
+	 *
+	 * The list marks that entry in whichever view is shown. The code reads this
+	 * beside d_opened_at, one time, and for the same reason: the mark reports
+	 * where the session began, and a reload would move it to wherever the log
+	 * has grown to.
+	 */
+	private SessionStart? d_session_start;
 
 	/** The branch-to-colour map for the current tips (FR-153). */
 	private Gee.Map<string, int> d_colours;
@@ -329,9 +341,20 @@ public class ReflogPaned : Gtk.Paned
 
 			// Where the user was standing when the window opened this
 			// repository (refer to d_opened_at). This is before reload(), thus
-			// the first preview already draws the mark.
+			// the first preview already keeps that commit drawn.
 			d_opened_at = d_repository != null
 				? Repository.head_commit(d_repository)
+				: null;
+
+			// And which reflog entry that was, for each ref (FR-170). The
+			// branch list and the stash come from the repository here rather
+			// than from the fields that reload() fills, because the reading
+			// must be of the state at open and reload() runs at the end of
+			// this setter.
+			d_session_start = d_repository != null
+				? SessionStart.read(d_repository,
+				                    Repository.list_branches(d_repository),
+				                    Repository.has_stash(d_repository))
 				: null;
 
 			// A new repository starts with an empty plan. The branches of the
@@ -923,7 +946,16 @@ public class ReflogPaned : Gtk.Paned
 		// its branch. In a branch view, each row belongs to that branch, which
 		// the tint needs.
 		var view_branch = (d_view != "all" && d_view != "stash") ? d_view : null;
-		d_list.populate(entries, d_current_branch, d_view == "all", d_colours, d_plan, view_branch);
+
+		// The row this log stood at when the window opened (FR-170). A ref
+		// that did not exist then, or whose log was empty, gives -1 and the
+		// list marks nothing.
+		var start_index = d_session_start != null
+			? d_session_start.index_in(ref_name, entries)
+			: -1;
+
+		d_list.populate(entries, d_current_branch, d_view == "all", d_colours, d_plan,
+		                view_branch, start_index);
 
 		// This is after populate. Thus the "N of M" count agrees with the rows
 		// that the code loaded with the current limits (FR-161).
@@ -1456,18 +1488,6 @@ public class ReflogPaned : Gtk.Paned
 
 			set_labels_without(from, branch_ref);
 			add_label(target, branch_ref);
-		}
-
-		// The starting point of the session, last, thus it comes after the real
-		// pills of its commit rather than before them.
-		//
-		// The mark is always drawn, also when nothing has moved yet and it sits
-		// beside the pill of the current branch. Then it says that you are
-		// still where you began, and as soon as a plan moves a branch away from
-		// it, the graph shows the distance the reset would travel.
-		if (d_opened_at != null)
-		{
-			add_label(d_opened_at, new SyntheticMarkerRef(_("where you started")));
 		}
 	}
 

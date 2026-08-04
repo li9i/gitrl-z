@@ -31,6 +31,7 @@ public enum ReflogColumn
 	DATE,
 	SELECTOR,
 	PLAN_BG,
+	START,
 	N_COLUMNS
 }
 
@@ -46,6 +47,9 @@ public enum ReflogColumn
  * them. A row in the reset plan has a light background tint in the colour of
  * its branch (FR-151). The colour of each branch comes from the map that the
  * lane walk of the graph made (FR-153).
+ *
+ * One row can carry the session mark, a pill before its message that says this
+ * entry was the newest of this reflog when the window opened (FR-170).
  */
 public class ReflogList : Object
 {
@@ -59,7 +63,7 @@ public class ReflogList : Object
 	private Gtk.TreeViewColumn d_sha_column;
 	private Gtk.CellRendererText d_sha_renderer;
 	private Gtk.TreeViewColumn d_message_column;
-	private Gtk.CellRendererText d_message_renderer;
+	private CellRendererMessage d_message_renderer;
 	private Gtk.TreeViewColumn d_date_column;
 	private Gtk.CellRendererText d_date_renderer;
 	private Gtk.TreeViewColumn d_selector_column;
@@ -129,7 +133,8 @@ public class ReflogList : Object
 		                            typeof(string),   // MESSAGE
 		                            typeof(string),   // DATE
 		                            typeof(string),   // SELECTOR
-		                            typeof(string));  // PLAN_BG
+		                            typeof(string),   // PLAN_BG
+		                            typeof(string));  // START
 
 		// A filter model is between the store and the view. Thus a search can
 		// hide rows and does not change the data (FR-117). The view then
@@ -329,12 +334,18 @@ public class ReflogList : Object
 		d_sha_column.fixed_width = 90;
 		d_view.append_column(d_sha_column);
 
-		d_message_renderer = new Gtk.CellRendererText();
+		// The session mark shares the Message column with the message itself
+		// (FR-170), and one renderer draws the two. A column of its own would
+		// hold the width of the pill on every row for a mark that one row
+		// carries, and a second renderer in this column cannot take its width
+		// from the row (refer to CellRendererMessage).
+		d_message_renderer = new CellRendererMessage();
 		d_message_renderer.ellipsize = Pango.EllipsizeMode.END;
 
 		d_message_column = new Gtk.TreeViewColumn.with_attributes(
 			_("Message"), d_message_renderer,
 			"text", ReflogColumn.MESSAGE,
+			"mark", ReflogColumn.START,
 			"cell-background", ReflogColumn.PLAN_BG);
 		d_message_column.sizing = Gtk.TreeViewColumnSizing.FIXED;
 		d_message_column.resizable = true;
@@ -380,13 +391,18 @@ public class ReflogList : Object
 	 * that are already in it (FR-151). The two can be null before the code
 	 * sets a repository. `view_branch` is the branch of the rows of a branch
 	 * view, or null in the `all` and `stash` views.
+	 *
+	 * `start_index` is the row that was the newest entry of this reflog when
+	 * gitrl-z opened the repository, and -1 when this view has none (FR-170).
+	 * That row gets the session mark.
 	 */
 	public void populate(Gee.List<ReflogEntry> entries,
 	                     string? current_branch,
 	                     bool show_branches,
 	                     Gee.Map<string, int>? colours,
 	                     ResetPlan? plan,
-	                     string? view_branch)
+	                     string? view_branch,
+	                     int start_index)
 	{
 		d_entries = entries;
 		d_operations = ReflogAnnotations.classify_operations(entries);
@@ -404,6 +420,10 @@ public class ReflogList : Object
 		d_branch_column.visible = show_branches;
 
 		d_store.clear();
+
+		// The words of the mark live with the column titles above, which are
+		// the other visible strings of this file.
+		var start_text = _("session start");
 
 		for (var i = 0; i < entries.size; i++)
 		{
@@ -428,7 +448,8 @@ public class ReflogList : Object
 			            ReflogColumn.MESSAGE, entry.message,
 			            ReflogColumn.DATE, format_date(entry.date),
 			            ReflogColumn.SELECTOR, entry.selector,
-			            ReflogColumn.PLAN_BG, plan_tint(i));
+			            ReflogColumn.PLAN_BG, plan_tint(i),
+			            ReflogColumn.START, i == start_index ? start_text : "");
 		}
 
 		fit_columns(show_branches);
@@ -639,6 +660,22 @@ public class ReflogList : Object
 	public bool row_is_tinted(int index)
 	{
 		return plan_tint(index) != null;
+	}
+
+	/** Says if the store row at `index` carries the session mark, for the tests. */
+	public bool row_is_start_mark(int index)
+	{
+		Gtk.TreeIter iter;
+
+		if (!d_store.get_iter(out iter, new Gtk.TreePath.from_indices(index)))
+		{
+			return false;
+		}
+
+		Value text;
+		d_store.get_value(iter, ReflogColumn.START, out text);
+
+		return (string)text != null && (string)text != "";
 	}
 
 	/** The branch attributed to the store row at `index`, for the tests. */

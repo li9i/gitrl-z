@@ -85,6 +85,9 @@ Built inside a container that matches the target Ubuntu so it links that release
 docker build --build-arg UBUNTU=24.04 -t gitrlz-build:24.04 .
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$PWD:/src" -w /src gitrlz-build:24.04 ./docker/build-deb.sh noble '~ubuntu24.04.1'
+
+# The `.deb` goes to `_build/deb/`. Install it with `apt`, so that you also get its dependencies.
+sudo apt-get install ./_build/deb/gitrl-z_*~ubuntu24.04.1_amd64.deb
 ```
 
 ```bash
@@ -92,12 +95,9 @@ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
 docker build --build-arg UBUNTU=26.04 -t gitrlz-build:26.04 .
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$PWD:/src" -w /src gitrlz-build:26.04 ./docker/build-deb.sh resolute '~ubuntu26.04.1'
-```
 
-The `.deb` goes to `_build/deb/`. Install it with `apt`, so that you also get its dependencies:
-
-```bash
-sudo apt-get install ./_build/deb/gitrl-z_*_amd64.deb
+# The `.deb` goes to `_build/deb/`. Install it with `apt`, so that you also get its dependencies.
+sudo apt-get install ./_build/deb/gitrl-z_*~ubuntu26.04.1_amd64.deb
 ```
 
 ## How to run it

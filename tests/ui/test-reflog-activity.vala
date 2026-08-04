@@ -413,43 +413,12 @@ private static void test_preview_keeps_the_tree_and_moves_the_branch()
 	}
 }
 
-private static void test_start_mark_sits_on_the_opening_commit()
+private static void test_graph_keeps_the_commit_the_session_started_on()
 {
-	// The graph marks where the user was standing when the window opened, so
-	// that a planned reset shows the distance it would travel from there.
-	try
-	{
-		var repo = Repo.create();
-
-		repo.commit("first");
-		var second = repo.commit("second");
-
-		var paned = activity_for(repo);
-		var second_oid = new Ggit.OId.from_string(second);
-
-		assert_true(has_label(paned.preview_labels_for(second_oid), "where you started"));
-
-		// It is the opening position and not the current one, so a reset
-		// planned in the window leaves it where it is.
-		var first_oid = new Ggit.OId.from_string(repo.git({"rev-parse", "HEAD~1"}).strip());
-		assert_true(paned.toggle_entry(paned.list.entries.size - 1));
-		assert_true(has_label(paned.preview_labels_for(second_oid), "where you started"));
-		assert_false(has_label(paned.preview_labels_for(first_oid), "where you started"));
-
-		paned.destroy();
-		repo.remove();
-	}
-	catch (Error e)
-	{
-		Test.fail_printf("fixture failed: %s", e.message);
-	}
-}
-
-private static void test_start_mark_survives_a_reset_outside_the_window()
-{
-	// The case the mark exists for: a hard reset in a terminal beside the
-	// window leaves the opening commit with no ref reaching it. The graph must
-	// still draw that commit, and the mark must still be on it.
+	// FR-169. A hard reset in a terminal beside the window leaves the opening
+	// commit with no ref reaching it. The graph carries no label for it, and
+	// it must still draw the commit: the position you came from is the one you
+	// are most likely to want back.
 	try
 	{
 		var repo = Repo.create();
@@ -467,9 +436,6 @@ private static void test_start_mark_survives_a_reset_outside_the_window()
 		// in the tip set regardless, so the row stays on screen.
 		assert_true(includes_oid(paned.included_tips, first));
 		assert_true(includes_oid(paned.included_tips, third));
-
-		var third_oid = new Ggit.OId.from_string(third);
-		assert_true(has_label(paned.preview_labels_for(third_oid), "where you started"));
 
 		paned.destroy();
 		repo.remove();
@@ -509,9 +475,235 @@ private static void test_graph_pills_follow_a_ref_change_outside_the_window()
 		assert_true(has_label(paned.preview_labels_for(first_oid), "main"));
 		assert_false(has_label(paned.preview_labels_for(third_oid), "main"));
 
-		// The commit the session started on keeps its mark, and now carries
-		// nothing else: no ref reaches it any more.
-		assert_true(has_label(paned.preview_labels_for(third_oid), "where you started"));
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_head_view_marks_the_row_the_session_opened_on()
+{
+	// FR-170. The mark answers "which row was I on when I opened this". With
+	// no mark on the HEAD view there is nothing to measure the log against,
+	// and the user has to remember the position instead of reading it.
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+		assert_cmpint(paned.list.entries.size, CompareOperator.GT, 1);
+
+		// Nothing has happened since the window opened, so the newest row is
+		// the row the session began at.
+		assert_true(paned.list.row_is_start_mark(0));
+
+		// One row and no more. Two marks would say the session began twice.
+		for (var i = 1; i < paned.list.entries.size; i++)
+		{
+			assert_false(paned.list.row_is_start_mark(i));
+		}
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_start_mark_drifts_down_as_the_log_grows()
+{
+	// FR-170. A commit made in a terminal beside the window pushes every row
+	// down one. A mark pinned to the top row would follow the log forward and
+	// point at the newest entry for ever, which is the one position the user
+	// already has and never needs to be told about.
+	try
+	{
+		var repo = Repo.create();
+
+		repo.commit("first");
+		var second = repo.commit("second");
+
+		var paned = activity_for(repo);
+
+		assert_true(paned.list.row_is_start_mark(0));
+
+		// Work done outside the window: one new entry at the top.
+		repo.commit("third");
+		paned.reload();
+
+		assert_false(paned.list.row_is_start_mark(0));
+		assert_true(paned.list.row_is_start_mark(1));
+
+		// And the marked row holds the entry that was newest at open, not
+		// merely the row under the top one.
+		assert_cmpstr(paned.list.entries[1].new_id.to_string(),
+		              CompareOperator.EQ, second);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_branch_view_marks_its_own_starting_row()
+{
+	// FR-170. Each ref keeps its own starting entry. Marking a branch view
+	// from HEAD's entry would mark nothing here, because the merge HEAD stood
+	// on at open is in no branch's own log, and a branch view with no mark
+	// reads as a branch the session never touched.
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("feature"));
+		assert_true(paned.list.row_is_start_mark(0));
+
+		var opened_on = paned.list.entries[0].new_id.to_string();
+
+		// Work on feature from a terminal beside the window.
+		repo.checkout("feature");
+		repo.commit("later feature work", "feature.txt", "later\n");
+		paned.reload();
+
+		assert_cmpstr(paned.view, CompareOperator.EQ, "feature");
+		assert_false(paned.list.row_is_start_mark(0));
+		assert_true(paned.list.row_is_start_mark(1));
+		assert_cmpstr(paned.list.entries[1].new_id.to_string(),
+		              CompareOperator.EQ, opened_on);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_stash_view_marks_its_own_starting_row()
+{
+	// FR-170. A stash pushed from a terminal beside the window buries the one
+	// that was on top at open. The stash the user came here to find is the one
+	// they left behind, so the mark has to stay on it rather than move to the
+	// newcomer.
+	try
+	{
+		var repo = braided_repo();
+
+		FileUtils.set_contents(repo.path.get_child("main.txt").get_path(), "dirty\n");
+		repo.stash("work in progress");
+
+		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("stash"));
+		assert_true(paned.list.row_is_start_mark(0));
+
+		var opened_on = paned.list.entries[0].new_id.to_string();
+
+		// A second stash, pushed outside the window.
+		FileUtils.set_contents(repo.path.get_child("main.txt").get_path(), "dirtier\n");
+		repo.stash("more work in progress");
+		paned.reload();
+
+		assert_cmpstr(paned.view, CompareOperator.EQ, "stash");
+		assert_cmpint(paned.list.entries.size, CompareOperator.EQ, 2);
+		assert_false(paned.list.row_is_start_mark(0));
+		assert_true(paned.list.row_is_start_mark(1));
+		assert_cmpstr(paned.list.entries[1].new_id.to_string(),
+		              CompareOperator.EQ, opened_on);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_branch_made_after_open_carries_no_mark()
+{
+	// FR-170. A branch that did not exist at open has no position the session
+	// started from. A mark on its newest row would invent one, and tell the
+	// user they had been somewhere they had never been.
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		// A branch created in a terminal beside the window.
+		repo.branch("later");
+		paned.reload();
+
+		assert_true(paned.select_ref("later"));
+		assert_cmpint(paned.list.entries.size, CompareOperator.GT, 0);
+
+		for (var i = 0; i < paned.list.entries.size; i++)
+		{
+			assert_false(paned.list.row_is_start_mark(i));
+		}
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_search_takes_the_mark_off_screen_with_its_row()
+{
+	// FR-170. The filters decide what is on screen and a decoration does not
+	// overrule them. A mark held back from a search would sit on some row the
+	// search did match, and name the wrong entry as the one the session began
+	// at.
+	try
+	{
+		var repo = Repo.create();
+
+		repo.commit("alpha");
+		repo.commit("beta");
+		repo.commit("omega");
+
+		var paned = activity_for(repo);
+
+		var all = paned.list.visible_count();
+		assert_cmpint(all, CompareOperator.EQ, 3);
+		assert_true(paned.list.row_is_start_mark(0));
+
+		// "alpha" matches the older row only, so the marked row is filtered
+		// out while the list still shows something.
+		paned.search("alpha");
+
+		var visible = paned.list.visible_count();
+		assert_cmpint(visible, CompareOperator.GT, 0);
+		assert_cmpint(visible, CompareOperator.LT, all);
+
+		// The row keeps the mark in the model. What must not happen is the
+		// filter letting it through, so every marked row has no view path.
+		var marked = 0;
+
+		for (var i = 0; i < paned.list.entries.size; i++)
+		{
+			if (paned.list.row_is_start_mark(i))
+			{
+				marked++;
+				assert_null(paned.list.view_path_for(i));
+			}
+		}
+
+		assert_cmpint(marked, CompareOperator.EQ, 1);
 
 		paned.destroy();
 		repo.remove();
@@ -1731,8 +1923,13 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/preview-keeps-tree-moves-branch", test_preview_keeps_the_tree_and_moves_the_branch);
 	Test.add_func("/gitrlz/activity/preview-writes-nothing", test_preview_writes_nothing);
 	Test.add_func("/gitrlz/activity/graph-pills-follow-ref-change", test_graph_pills_follow_a_ref_change_outside_the_window);
-	Test.add_func("/gitrlz/activity/start-mark-on-opening-commit", test_start_mark_sits_on_the_opening_commit);
-	Test.add_func("/gitrlz/activity/start-mark-survives-reset", test_start_mark_survives_a_reset_outside_the_window);
+	Test.add_func("/gitrlz/activity/graph-keeps-start-commit", test_graph_keeps_the_commit_the_session_started_on);
+	Test.add_func("/gitrlz/activity/start-mark-head-view", test_head_view_marks_the_row_the_session_opened_on);
+	Test.add_func("/gitrlz/activity/start-mark-drifts-down", test_start_mark_drifts_down_as_the_log_grows);
+	Test.add_func("/gitrlz/activity/start-mark-branch-view", test_branch_view_marks_its_own_starting_row);
+	Test.add_func("/gitrlz/activity/start-mark-stash-view", test_stash_view_marks_its_own_starting_row);
+	Test.add_func("/gitrlz/activity/start-mark-new-branch", test_branch_made_after_open_carries_no_mark);
+	Test.add_func("/gitrlz/activity/start-mark-hidden-by-search", test_search_takes_the_mark_off_screen_with_its_row);
 	Test.add_func("/gitrlz/activity/empty-reflog-placeholder", test_empty_reflog_shows_placeholder);
 	Test.add_func("/gitrlz/activity/reload-preserves-plan", test_reload_preserves_the_plan);
 	Test.add_func("/gitrlz/activity/reload-drops-stale", test_reload_drops_a_stale_plan_entry);

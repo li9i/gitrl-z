@@ -43,6 +43,7 @@ unit_tests = [
   'repository-state',
   'reset-plan',
   'reset-preview',
+  'session-start',
   'synthetic-ref',
 ]
 

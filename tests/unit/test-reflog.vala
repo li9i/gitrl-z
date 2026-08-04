@@ -104,6 +104,46 @@ private static void test_head_reflog_across_operations()
 	}
 }
 
+private static void test_read_stops_at_the_limit()
+{
+	// IC-169. The session mark reads the newest entry of every ref when a
+	// window opens, and a repository with many branches would otherwise read
+	// every one of those logs in full for one entry each.
+	try
+	{
+		var repo = Repo.create();
+
+		repo.commit("first");
+		repo.commit("second");
+		var third = repo.commit("third");
+
+		var repository = open_fixture(repo);
+
+		var one = Gitrlz.Reflog.read(repository, "HEAD", 1);
+
+		assert_cmpint(one.size, CompareOperator.EQ, 1);
+		assert_cmpstr(one[0].new_id.to_string(), CompareOperator.EQ, third);
+
+		// The selector counts from the log, not from the returned list, so a
+		// limited read names the same entry git names.
+		assert_cmpstr(one[0].selector, CompareOperator.EQ, "HEAD@{0}");
+
+		// A limit past the end of the log, and no limit, both give all of it.
+		assert_cmpint(Gitrlz.Reflog.read(repository, "HEAD", 99).size,
+		              CompareOperator.EQ, 3);
+		assert_cmpint(Gitrlz.Reflog.read(repository, "HEAD", 0).size,
+		              CompareOperator.EQ, 3);
+		assert_cmpint(Gitrlz.Reflog.read(repository, "HEAD").size,
+		              CompareOperator.EQ, 3);
+
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_matches_git_reflog_output()
 {
 	// The load-bearing assumption of IC-103, checked rather than trusted:
@@ -351,6 +391,7 @@ public static int main(string[] args)
 
 	Test.add_func("/gitrlz/reflog/branch-reflog", test_branch_reflog);
 	Test.add_func("/gitrlz/reflog/head-across-operations", test_head_reflog_across_operations);
+	Test.add_func("/gitrlz/reflog/read-stops-at-limit", test_read_stops_at_the_limit);
 	Test.add_func("/gitrlz/reflog/matches-git-reflog-output", test_matches_git_reflog_output);
 	Test.add_func("/gitrlz/reflog/stash-reflog", test_stash_reflog);
 	Test.add_func("/gitrlz/reflog/no-stash", test_no_stash_no_entries);
