@@ -85,7 +85,9 @@ Built inside a container that matches the target Ubuntu so it links that release
 docker build --build-arg UBUNTU=24.04 -t gitrlz-build:24.04 .
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$PWD:/src" -w /src gitrlz-build:24.04 ./docker/build-deb.sh noble '~ubuntu24.04.1'
+```
 
+```bash
 # Ubuntu 26.04
 docker build --build-arg UBUNTU=26.04 -t gitrlz-build:26.04 .
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
