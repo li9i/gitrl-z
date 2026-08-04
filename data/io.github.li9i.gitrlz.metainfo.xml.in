@@ -61,6 +61,37 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.3.0" date="2026-08-04">
+      <description>
+        <p>
+          Mark the reflog entry that was the newest one when the window opened,
+          and keep the commit that HEAD was on at that moment in the graph.
+        </p>
+        <p>Keep a copied command on the clipboard after gitrl-z stops.</p>
+      </description>
+    </release>
+    <release version="0.2.1" date="2026-07-26">
+      <description>
+        <p>
+          Remove the libdazzle build dependency, which Ubuntu 26.04 does not
+          have.
+        </p>
+      </description>
+    </release>
+    <release version="0.2.0" date="2026-07-26">
+      <description>
+        <p>Preview a detached HEAD, and recover from it.</p>
+        <p>Show the git command that each reflog entry records.</p>
+        <p>
+          Give a warning while a git operation is in progress, and offer to
+          abort it.
+        </p>
+        <p>
+          Mark the branch that is checked out, and offer to make a deleted
+          branch again.
+        </p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-07-21">
       <description>
         <p>First release.</p>

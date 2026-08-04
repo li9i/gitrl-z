@@ -1,3 +1,17 @@
+gitrl-z (0.3.0-1) noble; urgency=medium
+
+  * Mark the reflog entry that was the newest one of its log when the window
+    opened, with a "session start" pill before its message.
+  * Keep the commit that HEAD was on at that moment in the graph, so the
+    starting position stays visible when a reset in a terminal leaves it with
+    no ref that reaches it.
+  * Keep a copied command on the clipboard after gitrl-z stops, where the
+    session has a clipboard manager.
+  * Remove the Flatpak manifest. The AppImage, the PPA and the .deb are the
+    supported distributions.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Tue, 04 Aug 2026 21:51:34 +0300
+
 gitrl-z (0.2.1-1) noble; urgency=medium
 
   * Drop the libdazzle build dependency. It was used for a single helper, a
