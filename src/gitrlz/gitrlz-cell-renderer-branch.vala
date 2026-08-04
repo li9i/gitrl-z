@@ -131,7 +131,11 @@ public class CellRendererBranch : Gtk.CellRenderer
 		// Left-justified against the leading edge of the cell. Thus the
 		// names make a straight column.
 		var x = (double)cell_area.x;
-		var y = cell_area.y + (cell_area.height - pill_height) / 2.0;
+
+		// On a whole pixel, as the labels of gitg are. A fractional origin
+		// spreads the top and the bottom edge of the fill over two rows of
+		// pixels and leaves them grey.
+		var y = Math.floor(cell_area.y + (cell_area.height - pill_height) / 2.0);
 
 		var colour = Gitg.Color.from_index(colour_index);
 
@@ -143,8 +147,12 @@ public class CellRendererBranch : Gtk.CellRenderer
 
 		// Light text, as the labels of gitg have. No border: a measurement
 		// against gitg shows that its labels have none.
+		//
+		// One pixel above the centre, which is where gitg puts the text of a
+		// label. Words sit low in their line box, thus a true centre reads as
+		// too low, and the lift corrects it.
 		cr.set_source_rgb(1.0, 1.0, 1.0);
-		cr.move_to(x + PADDING_X, y + (pill_height - h) / 2.0);
+		cr.move_to(x + PADDING_X, y + (pill_height - h) / 2.0 - 1);
 		Pango.cairo_show_layout(cr, layout);
 
 		cr.restore();

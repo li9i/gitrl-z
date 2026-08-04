@@ -38,20 +38,30 @@ namespace Gitrlz
  *
  * The appearance is deliberately not the appearance of a ref. Every ref pill in
  * the application is filled with a palette colour, in the list and in the
- * graph, and its text is light. This one is filled at the far end of the theme
- * from the text, and its edge and its words are the text colour. No palette
- * colour is white and none is near black, thus the mark cannot be read as a
- * branch, a remote, a tag or a stash.
+ * graph, and its text is light. This one has no fill at all: an edge and its
+ * words, in the text colour, with the row showing through. Thus it cannot be
+ * read as a branch, a remote, a tag or a stash, and it sits in its row rather
+ * than on top of it.
+ *
+ * A fill was the first attempt, white under a light theme and near black under
+ * a dark one, chosen as the opposite of the text. It failed on the rows that
+ * matter. A tinted row (FR-151) showed the mark as a hole punched through the
+ * tint, and no fixed value can follow a row whose colour comes from the plan,
+ * from the theme or from the selection. An unfilled pill follows all three
+ * without being told.
  *
  * The geometry is the geometry of the branch chip, so that the two look like
- * members of one family rather than two accidents. The constants are declared
- * again here and not shared with CellRendererBranch. A shared constant would
- * tie the appearance of the branch chip to the appearance of a mark that is
- * deliberately not a branch.
+ * members of one family rather than two accidents. The corner is the one
+ * departure: 6 px, which is the radius that the stylesheet gives the pills of
+ * the graph, against the 4 px that a measurement of gitg gave the chip.
+ *
+ * The constants are declared again here and not shared with
+ * CellRendererBranch. A shared constant would tie the appearance of the branch
+ * chip to the appearance of a mark that is deliberately not a branch.
  */
 public class CellRendererMessage : Gtk.CellRendererText
 {
-	private const double RADIUS = 4.0;
+	private const double RADIUS = 6.0;
 	private const double FONT_SCALE = 0.83;
 	private const int PADDING_X = 6;
 	private const int MARGIN_Y = 2;
@@ -125,39 +135,47 @@ public class CellRendererMessage : Gtk.CellRendererText
 		var pill_height = double.max(h + 2, cell_area.height - MARGIN_Y * 2);
 
 		// Left justified against the leading edge of the cell, as the branch
-		// chip is.
-		var x = (double)cell_area.x;
-		var y = cell_area.y + (cell_area.height - pill_height) / 2.0;
+		// chip is, past the horizontal padding that the text renderer keeps
+		// for itself. Thus the pill starts where the message of an unmarked
+		// row starts, and the left edges make a straight column.
+		var x = (double)(cell_area.x + (int)xpad);
 
-		// One colour is read, and the fill follows from it. The background of
-		// the widget would say the same thing, but every getter for it is
-		// deprecated in GTK 3.
+		// Rounded down to a whole pixel. The border below is one pixel wide,
+		// and a fractional origin would spread it over two rows of pixels and
+		// leave it grey and blurred.
+		var y = Math.floor(cell_area.y + (cell_area.height - pill_height) / 2.0);
+
+		// The text colour, which draws both the edge and the words.
 		var fg = widget.get_style_context().get_color(widget.get_state_flags());
-
-		// The fill sits at the far end of the theme from the text. A dark
-		// foreground means a light theme and takes a white pill, and a light
-		// foreground means a dark theme and takes a near black one. Neither
-		// value can land on a palette colour, so neither can pass for a ref.
-		var luminance = 0.2126 * fg.red + 0.7152 * fg.green + 0.0722 * fg.blue;
-		var fill = luminance < 0.5 ? 1.0 : 0.1;
 
 		cr.save();
 
-		rounded_rectangle(cr, x, y, pill_width, pill_height, RADIUS);
-		cr.set_source_rgb(fill, fill, fill);
-		cr.fill_preserve();
+		// Cairo puts half of a stroke on each side of the path, thus the path
+		// is inset by half the border and the ink stays inside the pill. The
+		// pill then covers the same box as the branch chip would with the same
+		// words, and the inset lands the border on the pixel grid, as the
+		// labels of gitg do. The radius is inset with it, so that the outer
+		// edge of the border keeps the radius of the chip.
+		var inset = BORDER_WIDTH / 2.0;
 
-		// The edge in the text colour. The fill is the same colour as the row
-		// under most themes, thus without an edge the pill would be its words
-		// alone and would read as part of the message.
+		rounded_rectangle(cr,
+		                  x + inset, y + inset,
+		                  pill_width - BORDER_WIDTH, pill_height - BORDER_WIDTH,
+		                  RADIUS - inset);
+
+		// The edge alone, with no fill under it. Without the edge the mark
+		// would be its words on the row and would read as part of the message.
 		cr.set_source_rgba(fg.red, fg.green, fg.blue, fg.alpha);
 		cr.set_line_width(BORDER_WIDTH);
 		cr.stroke();
 
 		// The words of the mark take the foreground colour, which is already
-		// the source. They read against the fill under either theme, because
-		// the fill was chosen as the opposite of it.
-		cr.move_to(x + PADDING_X, y + (pill_height - h) / 2.0);
+		// the source, and read against the row as the message does.
+		//
+		// One pixel above the centre, which is where gitg puts the text of a
+		// label. Words sit low in their line box, thus a true centre reads as
+		// too low, and the lift corrects it.
+		cr.move_to(x + PADDING_X, y + (pill_height - h) / 2.0 - 1);
 		Pango.cairo_show_layout(cr, layout);
 
 		cr.restore();
