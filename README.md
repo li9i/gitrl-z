@@ -1,10 +1,12 @@
 # `gitrl-z`
 
-> A tool to help you undo the predicament you found yourself in in `git`
+> A visual reflog browser with reset preview
 
-`gitrl-z` shows the reflog the way `gitg` shows history, and previews what a `git reset --hard` would do before you run it. It's pronounced git-ROL-ZED (/ɡɪtˈrəʊlzɛd/), after ctrl-z said aloud: control zed.
+The reflog records every position of every branch: commits a rebase rewrote, commits a reset abandoned, branches that were deleted. `git` shows this as a wall of text. `gitrl-z` draws it out.
 
-The reflog keeps a record of each position of each branch. This includes commits that a rebase rewrote, and commits that a reset abandoned. `gitrl-z` shows that record. When you click an entry, it draws your full history with the branch label of that entry at the position a reset would give it. Thus you see where the branch goes, and also what the reset leaves behind. **`gitrl-z` writes nothing to the repository.**
+It lists the reflog the way `gitg` shows history. Click an entry and the commit graph redraws with that branch moved to where a reset would put it, so you see where the branch goes and what it leaves behind in the same picture. `gitrl-z` gives you the command; running it stays your decision. **It writes nothing to the repository.**
+
+Pronounced git-ROL-ZED (/ɡɪtˈrəʊlzɛd/), after ctrl-z said aloud: control zed.
 
 ![The gitrl-z window with a reflog, a rebase, and a reset preview](docs/screenshots/reflog-activity.png)
 
@@ -12,7 +14,7 @@ The reflog keeps a record of each position of each branch. This includes commits
 
 ## Examples
 
-In each of these examples, `git` puts you in a difficult state. `gitrl-z` shows you the way out, and writes nothing to the repository.
+Open `gitrl-z` after any of these and the reflog shows you what happened. Click the entry from before it went wrong and the graph shows you the way back.
 
 - **You ran `git reset --hard` and your commits are gone.** Find the reflog entry from immediately before the reset, and click it. The graph draws again with your branch at its initial position. You see what comes back, and `gitrl-z` gives you the `git reset --hard` command that recovers it.
 - **A rebase put the branch in a bad state.** The reflog keeps the tip from before the rebase. Click it to see the branch at that commit, in the same graph as the rebased version. Do the reset only when the result is correct.

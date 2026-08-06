@@ -25,9 +25,10 @@ Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          git
-Description: git reflog browser and reset preview
- gitrl-z shows the git reflog the way gitg shows commit history, and previews
- what a hard reset would do before you run it.
+Description: visual git reflog browser with reset preview
+ gitrl-z is a visual browser for the git reflog. It lists reflog entries the
+ way gitg lists commits, and previews what a hard reset would do before you
+ run it.
  .
  The reflog remembers where every branch has been, including commits that a
  rebase rewrote or a reset abandoned. gitrl-z lists it, and when an entry is

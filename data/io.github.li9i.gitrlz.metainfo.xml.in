@@ -6,19 +6,18 @@
   <project_license>GPL-2.0-or-later</project_license>
 
   <name>gitrl-z</name>
-  <summary>Git reflog browser and reset preview</summary>
+  <summary>Visual reflog browser with reset preview</summary>
 
   <description>
     <p>
-      gitrl-z helps you undo the predicament you found yourself in in git. It
-      shows the reflog the way gitg shows history, and previews what a hard
-      reset would do before you run it.
+      The reflog records every position of every branch, including commits
+      that a rebase rewrote or a reset abandoned. git shows this as a wall of
+      text. gitrl-z draws it out the way gitg draws commit history.
     </p>
     <p>
-      The reflog remembers where every branch has been, including commits
-      that a rebase rewrote or a reset abandoned. gitrl-z lists it, and when
-      you click an entry it draws the commit graph as it would look if that
-      entry's branch were reset there.
+      Click a reflog entry and the commit graph redraws with that branch
+      moved to where a hard reset would put it. You see where the branch ends
+      up and what gets left behind, before you touch anything.
     </p>
     <p>
       Nothing is ever written to the repository. gitrl-z shows you the command
@@ -30,7 +29,7 @@
 
   <screenshots>
     <screenshot type="default">
-      <caption>A reflog with a rebase run, and the reset that would undo it drawn as a graph</caption>
+      <caption>The reflog lists what happened; the graph shows where a reset would land</caption>
       <image>https://raw.githubusercontent.com/li9i/gitrl-z/master/docs/screenshots/reflog-activity.png</image>
     </screenshot>
   </screenshots>
@@ -56,6 +55,9 @@
     <keyword>reflog</keyword>
     <keyword>undo</keyword>
     <keyword>reset</keyword>
+    <keyword>branches</keyword>
+    <keyword>history</keyword>
+    <keyword>preview</keyword>
   </keywords>
 
   <content_rating type="oars-1.1"/>
