@@ -1,3 +1,10 @@
+gitrl-z (0.4.0-1) noble; urgency=medium
+
+  * Show the absolute timestamp when hovering over the date column.
+  * Reframe the project as a visual reflog browser with reset preview.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Wed, 06 Aug 2026 14:00:00 +0200
+
 gitrl-z (0.3.0-1) noble; urgency=medium
 
   * Mark the reflog entry that was the newest one of its log when the window
