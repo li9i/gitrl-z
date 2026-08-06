@@ -1479,6 +1479,56 @@ private static void test_deleted_branch_offers_recreate()
 	}
 }
 
+private static void test_deleted_branch_row_is_tinted()
+{
+	// FR-151, FR-166: the row of a deleted branch enters the plan like any
+	// other row, thus it carries the tint that says it is planned. The branch
+	// has no lane in the graph of the repository as it stands, and so no
+	// colour of its own, but the tint does not depend on that: a planned row
+	// with no mark reads as a click that did nothing.
+	try
+	{
+		var repo = Repo.create();
+		repo.commit("first");
+		repo.branch("recover");
+		repo.checkout("recover");
+		repo.commit("work to recover", "recover.txt");
+		repo.checkout("main");
+		repo.delete_branch("recover");
+
+		var paned = activity_for(repo);
+
+		var index = -1;
+
+		for (var i = 0; i < paned.list.entries.size; i++)
+		{
+			if (paned.list.branch_for_index(i) == "recover")
+			{
+				index = i;
+				break;
+			}
+		}
+
+		assert_cmpint(index, CompareOperator.GE, 0);
+		assert_false(paned.list.row_is_tinted(index));
+
+		assert_true(paned.toggle_entry(index));
+		assert_true(paned.list.row_is_tinted(index));
+
+		// And out again, so the tint follows the plan and is not a one-way
+		// mark.
+		assert_true(paned.toggle_entry(index));
+		assert_false(paned.list.row_is_tinted(index));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_planned_row_is_tinted_and_survives_a_ref_switch()
 {
 	// FR-151: a planned row carries a tint, keyed by branch and commit, so it
@@ -1950,6 +2000,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/stash-offers-apply", test_stash_offers_apply_not_reset);
 	Test.add_func("/gitrlz/activity/branchless-not-togglable", test_branchless_row_is_not_togglable);
 	Test.add_func("/gitrlz/activity/deleted-branch-recreate", test_deleted_branch_offers_recreate);
+	Test.add_func("/gitrlz/activity/deleted-branch-tinted", test_deleted_branch_row_is_tinted);
 	Test.add_func("/gitrlz/activity/planned-row-tinted", test_planned_row_is_tinted_and_survives_a_ref_switch);
 	Test.add_func("/gitrlz/activity/refs-bold-planned", test_refs_panel_bolds_a_planned_branch);
 	Test.add_func("/gitrlz/activity/graph-keeps-scroll", test_graph_keeps_its_scroll_across_a_toggle);

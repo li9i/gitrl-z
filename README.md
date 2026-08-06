@@ -8,7 +8,7 @@ It lists the reflog the way `gitg` shows history. Click an entry and the commit 
 
 Pronounced git-ROL-ZED (/ɡɪtˈrəʊlzɛd/), after ctrl-z said aloud: control zed.
 
-![The gitrl-z window with a reflog, a rebase, and a reset preview](docs/screenshots/reflog-activity.png)
+![Reflog entries clicked one after another, with the commit graph redrawn under each one](docs/screenshots/demo-one-branch.gif)
 
 `gitrl-z` is built from `gitg`. It uses the language of gitg (Vala) and the same libraries. The commit graph in the preview is the renderer of gitg.
 

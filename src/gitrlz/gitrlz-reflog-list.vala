@@ -46,7 +46,9 @@ public enum ReflogColumn
  * The columns fit their content at open (FR-147), and the user can resize
  * them. A row in the reset plan has a light background tint in the colour of
  * its branch (FR-151). The colour of each branch comes from the map that the
- * lane walk of the graph made (FR-153).
+ * lane walk of the graph made (FR-153). A branch that the walk gave no colour
+ * tints neutral grey, because the tint says the row is planned and that is true
+ * whether or not the branch has a lane.
  *
  * One row can carry the session mark, a pill before its message that says this
  * entry was the newest of this reflog when the window opened (FR-170).
@@ -114,6 +116,9 @@ public class ReflogList : Object
 
 	/** The strength of the plan tint: a light wash, and not a solid block. */
 	private const double TINT_ALPHA = 0.28;
+
+	/** The grey that tints a planned row whose branch has no lane colour. */
+	private const uint TINT_NEUTRAL = 128;
 
 	/** Extra width for a fitted column, and for a header measured for its title. */
 	private const int COLUMN_PAD = 10;
@@ -503,7 +508,9 @@ public class ReflogList : Object
 	 *
 	 * It is a wash of the colour of the branch at a low alpha. GTK parses it
 	 * from an `rgba()` string. Null leaves the cell-background unset, thus an
-	 * unplanned row has the background of the theme.
+	 * unplanned row has the background of the theme. Only an unplanned row gives
+	 * null: whether a branch has a colour decides how the row is tinted, and not
+	 * whether it is tinted.
 	 */
 	private string? plan_tint(int index)
 	{
@@ -530,9 +537,15 @@ public class ReflogList : Object
 		var colour = d_colours != null && d_colours.has_key(branch)
 			? d_colours[branch] : -1;
 
+		// A branch with no colour is a branch with no lane in the graph of the
+		// repository as it stands: the deleted branch that a plan recreates
+		// (FR-166). It is in the plan the same as any other, and a planned row
+		// that carries no tint reads as a click that did nothing. Thus a
+		// neutral grey, which claims no lane colour that it cannot agree with.
 		if (colour < 0)
 		{
-			return null;
+			return "rgba(%u,%u,%u,%.3f)".printf(
+				TINT_NEUTRAL, TINT_NEUTRAL, TINT_NEUTRAL, TINT_ALPHA);
 		}
 
 		var c = Gitg.Color.from_index(colour);
