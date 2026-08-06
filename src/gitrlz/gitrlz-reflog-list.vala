@@ -253,6 +253,23 @@ public class ReflogList : Object
 		return indices.length > 0 ? indices[0] : -1;
 	}
 
+	public Gtk.TreeViewColumn date_column
+	{
+		get { return d_date_column; }
+	}
+
+	public string? date_tooltip_at(Gtk.TreePath path)
+	{
+		var entry = entry_at(path);
+
+		if (entry == null || entry.date == null)
+		{
+			return null;
+		}
+
+		return entry.date.format("%Y-%m-%d %H:%M:%S %z");
+	}
+
 	public Gee.List<ReflogEntry> entries
 	{
 		get { return d_entries; }

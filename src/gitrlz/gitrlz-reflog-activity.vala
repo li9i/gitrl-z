@@ -2091,13 +2091,16 @@ public class ReflogPaned : Gtk.Paned
 			return false;
 		}
 
-		// Only the gutter, which is the first column, has a tooltip.
-		if (column != d_reflog_list.get_column(0))
-		{
-			return false;
-		}
+		string? text = null;
 
-		var text = d_list.tooltip_at(path);
+		if (column == d_reflog_list.get_column(0))
+		{
+			text = d_list.tooltip_at(path);
+		}
+		else if (column == d_list.date_column)
+		{
+			text = d_list.date_tooltip_at(path);
+		}
 
 		if (text == null)
 		{
