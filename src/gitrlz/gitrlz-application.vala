@@ -178,6 +178,13 @@ public class Application : Gtk.Application
 
 		Hdy.init();
 
+		// Every window and dialog takes the application icon from the icon
+		// theme. Without this, GTK sets no icon on the window, and a window
+		// list or a task switcher falls back to a generic one: the icon is
+		// installed under the application id, whereas the fallback lookup
+		// uses the name of the binary, which is not an icon name here.
+		Gtk.Window.set_default_icon_name(Config.APPLICATION_ID);
+
 		// The stylesheet of gitrl-z. Gitg.init() loads the vendored
 		// libgitg-style.css, but no code loads ours. Without our stylesheet,
 		// the command banner renders in the usual background of the theme,
