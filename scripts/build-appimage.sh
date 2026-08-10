@@ -58,8 +58,7 @@ chmod +x "$tools"/*.AppImage "$tools/linuxdeploy-plugin-gtk.sh"
 # linuxdeploy looks for `appimagetool` on PATH; give it one.
 ln -sf appimagetool-x86_64.AppImage "$tools/appimagetool"
 
-# 4. Bundle everything and emit the AppImage into the repository root.
-rm -f "$root"/gitrl-z-*-x86_64.AppImage
+# 4. Bundle everything into the AppDir.
 APPIMAGE_EXTRACT_AND_RUN=1 DEPLOY_GTK_VERSION=3 VERSION="$version" \
 PATH="$PWD/$tools:$PATH" \
 	"$tools/linuxdeploy-x86_64.AppImage" \
@@ -67,8 +66,27 @@ PATH="$PWD/$tools:$PATH" \
 		--executable "$appdir/usr/bin/gitrlz" \
 		--desktop-file "$appdir/usr/share/applications/io.github.li9i.gitrlz.desktop" \
 		--icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/io.github.li9i.gitrlz.png" \
-		--plugin gtk \
-		--output appimage
+		--plugin gtk
+
+# 5. Put the app's own GSettings schema back.
+#
+# The GTK plugin copies the whole of the build machine's GSettings schema
+# directory over the AppDir's and recompiles it. That replaces the schema
+# installed in step 1 with whichever version of gitrl-z the build machine
+# happens to have installed system wide, or with nothing at all on a machine
+# that has never installed it. Either way the app aborts at startup on a key
+# the schema it was built against has and the bundled one does not. Copying
+# the freshly built schema back over the plugin's and recompiling leaves the
+# AppImage carrying the schema its binary expects.
+schemas=$appdir/usr/share/glib-2.0/schemas
+cp "$work/build/data/io.github.li9i.gitrlz.gschema.xml" "$schemas/"
+glib-compile-schemas "$schemas"
+
+# 6. Emit the AppImage into the repository root.
+rm -f "$root"/gitrl-z-*-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 VERSION="$version" \
+	"$tools/appimagetool-x86_64.AppImage" \
+		"$appdir" "$root/gitrl-z-$version-x86_64.AppImage"
 
 echo "--- built ---"
 ls -la "$root"/gitrl-z-*-x86_64.AppImage
