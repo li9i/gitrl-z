@@ -1,31 +1,33 @@
 #!/bin/sh
-# Regenerate the downscaled application icons from the 128 px original.
+# Regenerate the installed application icons from the SVG master.
 #
-# The application icon is raster artwork, not an SVG, so hicolor gets one file
-# per size rather than a single scalable/ entry. Only the 128 px file is
-# authored; the smaller ones are derived and committed, so that building the
-# package needs no image tooling. Run this after replacing the original.
+# Run from anywhere:
 #
-# Lanczos rather than the default filter: the icon's git glyph is thin, and a
-# box or bilinear downscale loses the branch line at 48 px.
+#   ./scripts/regen-icons.sh
+#   -> data/icons/io.github.li9i.gitrlz-{128,64,48}.png
+#
+# hicolor gets one PNG per size rather than a single scalable/ entry, because
+# a panel that picks the nearest size and scales it produces a softer icon than
+# one drawn at the size it needs. The PNGs are committed, so building the
+# package needs no image tooling; only this script does.
+#
+# Each size is rendered from the SVG rather than downscaled from the largest,
+# so the thin parts of the loop stay crisp at 48.
 
 set -eu
 
 cd "$(dirname "$0")/.."
 
-src=data/icons/io.github.li9i.gitrlz-128.png
+src=data/icons/io.github.li9i.gitrlz.svg
 test -f "$src" || { echo "regen-icons: $src not found" >&2; exit 1; }
 
-python3 - "$src" <<'EOF'
-import sys
-from PIL import Image
+command -v rsvg-convert >/dev/null 2>&1 || {
+	echo "regen-icons: rsvg-convert not found (Debian: librsvg2-bin)" >&2
+	exit 1
+}
 
-src = Image.open(sys.argv[1])
-if src.size != (128, 128):
-    sys.exit(f"regen-icons: expected a 128x128 original, got {src.size[0]}x{src.size[1]}")
-
-for size in (64, 48):
-    out = f"data/icons/io.github.li9i.gitrlz-{size}.png"
-    src.resize((size, size), Image.LANCZOS).save(out, optimize=True)
-    print(f"wrote {out}")
-EOF
+for size in 128 64 48; do
+	out="data/icons/io.github.li9i.gitrlz-$size.png"
+	rsvg-convert -w "$size" -h "$size" "$src" -o "$out"
+	echo "wrote $out"
+done

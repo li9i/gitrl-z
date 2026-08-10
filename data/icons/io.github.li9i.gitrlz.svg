@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  gitrl-z application icon, and the master the installed PNGs are rendered
+  from. Run scripts/regen-icons.sh after editing this file.
+
+  The Git logo diamond, with the reflog around it: a loop that runs
+  anticlockwise for 250 degrees and finishes in an arrow head. The loop is
+  turned so that the head lands in the gap between the diamond's top and left
+  corners, rather than at twelve o'clock where the diamond would cut it.
+
+  The diamond is the Git logo by Jason Long, CC BY 3.0. The About dialog
+  carries the attribution.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+
+  <!-- The reflog, behind the diamond. Radius 25.5, centred on 32,32. -->
+  <path d="M21.22 55.11A25.5 25.5 0 1 0 13.97 13.97"
+        fill="none" stroke="#3A8F94" stroke-width="5.8" stroke-linecap="round"/>
+  <path d="M7.00 20.94L8.64 8.64L19.30 19.30Z" fill="#3A8F94"/>
+
+  <!-- The diamond: a square on its corner. -->
+  <rect x="13" y="13" width="38" height="38" rx="5" fill="#F05033"
+        transform="rotate(45 32 32)"/>
+
+  <!-- The branch glyph. It used to be the black tile showing through, so it
+       needs a colour of its own now that there is no tile. -->
+  <g fill="#FFF3EE" stroke="#FFF3EE" stroke-width="3.7" stroke-linecap="round">
+    <path d="M32 20V45"/>
+    <path d="M32 22L42.5 32.5"/>
+    <circle cx="32" cy="20" r="4.3" stroke="none"/>
+    <circle cx="32" cy="45" r="4.3" stroke="none"/>
+    <circle cx="42.5" cy="32.5" r="4.3" stroke="none"/>
+  </g>
+
+</svg>

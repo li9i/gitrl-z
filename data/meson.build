@@ -6,10 +6,11 @@
 # Installed under the application id so the .desktop entry's Icon= key
 # resolves. The symbolic variant is what a dark panel or a notification uses.
 #
-# The application icon is a raster original, so it goes in the sized hicolor
-# directories rather than scalable/. 128 is the artwork as drawn; 64 and 48
-# are Lanczos downscales of it, committed rather than generated so the build
-# needs no image tooling. Regenerate them if the artwork changes —
+# The application icon is authored as icons/io.github.li9i.gitrlz.svg. It goes
+# into the sized hicolor directories rather than scalable/ because a panel that
+# picks the nearest size and scales it gives a softer icon than one drawn at
+# the size it needs. Each PNG is rendered from the SVG and committed, so the
+# build needs no image tooling. Regenerate them if the artwork changes:
 # scripts/regen-icons.sh.
 foreach size : ['128', '64', '48']
   install_data(
