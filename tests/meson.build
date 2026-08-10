@@ -84,6 +84,7 @@ xvfb_wrapper = find_program('ui/run-xvfb.sh')
 
 ui_tests = [
   'window',
+  'diff-view',
   'reflog-activity',
   'reflog-limits',
 ]

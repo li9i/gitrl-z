@@ -54,6 +54,10 @@ public class DiffWindow : Gtk.Window
 
 		set_default_size(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
+		// A diff is wide and long, thus the window opens filling the screen. The
+		// default size above is what it returns to when it is unmaximised.
+		maximize();
+
 		// The window reads as a detail of the graph, thus Escape closes it, as
 		// it closes a dialog.
 		key_press_event.connect((event) => {

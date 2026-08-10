@@ -39,21 +39,30 @@ public enum DiffRowKind
 /**
  * One row of a rendered diff.
  *
- * `text` carries no leading `+` or `-`: the side it is on says which it is, and
- * a split view has no column for a sign. `spans` are the parts of `text` that
- * differ from the line this one replaced, and are empty for every kind but
- * ADDED and REMOVED.
+ * `text` carries no leading `+` or `-`: the sign belongs in the gutter that the
+ * view draws, and a sign in the text as well would read as `--drop`. `spans`
+ * are the parts of `text` that differ from the line this one replaced, and are
+ * empty for every kind but ADDED and REMOVED.
+ *
+ * `lineno` is the number of this line in the file of its own side: the old file
+ * on the left, the new file on the right. A heading and the blank that stands
+ * where a side has no line have NO_LINE, because neither is a line of a file.
  */
 public class DiffRow : Object
 {
+	/** The line number of a row that is not a line of either file. */
+	public const int NO_LINE = 0;
+
 	public DiffRowKind kind;
 	public string text;
+	public int lineno;
 	public WordSpan[] spans;
 
-	public DiffRow(DiffRowKind kind, string text)
+	public DiffRow(DiffRowKind kind, string text, int lineno = NO_LINE)
 	{
 		this.kind = kind;
 		this.text = text;
+		this.lineno = lineno;
 		this.spans = {};
 	}
 }
@@ -133,11 +142,16 @@ public class CommitDiff : Object
 		d_pairs.add(new DiffPair(new DiffRow(kind, text), new DiffRow(kind, "")));
 	}
 
-	/** Adds a line that the two sides share. */
-	private void add_context(string text)
+	/**
+	 * Adds a line that the two sides share.
+	 *
+	 * The line stands at one number in the old file and at another in the new
+	 * one, thus each side keeps its own.
+	 */
+	private void add_context(string text, int old_lineno, int new_lineno)
 	{
-		d_pairs.add(new DiffPair(new DiffRow(DiffRowKind.CONTEXT, text),
-		                         new DiffRow(DiffRowKind.CONTEXT, text)));
+		d_pairs.add(new DiffPair(new DiffRow(DiffRowKind.CONTEXT, text, old_lineno),
+		                         new DiffRow(DiffRowKind.CONTEXT, text, new_lineno)));
 	}
 
 	private void build(Ggit.Repository repository, Ggit.OId id) throws Error
@@ -258,16 +272,18 @@ public class CommitDiff : Object
 		switch (line.get_origin())
 		{
 			case Ggit.DiffLineType.ADDITION:
-				d_added.add(new DiffRow(DiffRowKind.ADDED, text));
+				d_added.add(new DiffRow(DiffRowKind.ADDED, text,
+				                        line.get_new_lineno()));
 				break;
 
 			case Ggit.DiffLineType.DELETION:
-				d_removed.add(new DiffRow(DiffRowKind.REMOVED, text));
+				d_removed.add(new DiffRow(DiffRowKind.REMOVED, text,
+				                          line.get_old_lineno()));
 				break;
 
 			case Ggit.DiffLineType.CONTEXT:
 				flush();
-				add_context(text);
+				add_context(text, line.get_old_lineno(), line.get_new_lineno());
 				break;
 
 			case Ggit.DiffLineType.CONTEXT_EOFNL:

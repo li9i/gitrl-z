@@ -257,6 +257,78 @@ private static void test_an_unequal_change_keeps_the_sides_level()
 	}
 }
 
+private static void test_each_side_carries_its_own_line_numbers()
+{
+	try
+	{
+		var repo = Repo.create();
+
+		repo.commit("first", "song.txt", "one\ntwo\nthree\n");
+		var second = repo.commit("second", "song.txt", "one\nTWO\nthree\nfour\n");
+
+		var repository = open_diff_fixture(repo);
+		var pairs = Gitrlz.CommitDiff.read(repository, new Ggit.OId.from_string(second));
+
+		Gitrlz.DiffPair? changed = null;
+		Gitrlz.DiffPair? appended = null;
+
+		foreach (var pair in pairs)
+		{
+			if (pair.left != null && pair.left.kind == Gitrlz.DiffRowKind.REMOVED)
+			{
+				changed = pair;
+			}
+
+			if (pair.left == null && pair.right != null
+			    && pair.right.kind == Gitrlz.DiffRowKind.ADDED)
+			{
+				appended = pair;
+			}
+		}
+
+		// The changed line is the second of the old file and the second of the
+		// new one, thus both sides read 2.
+		assert_nonnull(changed);
+		assert_cmpint(changed.left.lineno, CompareOperator.EQ, 2);
+		assert_nonnull(changed.right);
+		assert_cmpint(changed.right.lineno, CompareOperator.EQ, 2);
+
+		// The line added at the end is the fourth of the new file, and the old
+		// file has no line beside it to number.
+		assert_nonnull(appended);
+		assert_cmpint(appended.right.lineno, CompareOperator.EQ, 4);
+
+		// A context line stands at its own number on each side, and here the two
+		// files agree on where it is.
+		foreach (var pair in pairs)
+		{
+			if (pair.left == null || pair.left.kind != Gitrlz.DiffRowKind.CONTEXT)
+			{
+				continue;
+			}
+
+			assert_cmpint(pair.left.lineno, CompareOperator.GT, 0);
+			assert_cmpint(pair.right.lineno, CompareOperator.EQ, pair.left.lineno);
+		}
+
+		// A heading is no line of either file, thus it carries no number.
+		foreach (var pair in pairs)
+		{
+			if (pair.left != null && pair.left.kind == Gitrlz.DiffRowKind.FILE)
+			{
+				assert_cmpint(pair.left.lineno, CompareOperator.EQ,
+				              Gitrlz.DiffRow.NO_LINE);
+			}
+		}
+
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_each_changed_file_gets_a_heading()
 {
 	try
@@ -335,6 +407,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/commit-diff/root-commit", test_a_root_commit_shows_its_whole_content);
 	Test.add_func("/gitrlz/commit-diff/no-sign-in-text", test_a_row_carries_no_sign_in_its_text);
 	Test.add_func("/gitrlz/commit-diff/sides-stay-level", test_an_unequal_change_keeps_the_sides_level);
+	Test.add_func("/gitrlz/commit-diff/line-numbers", test_each_side_carries_its_own_line_numbers);
 	Test.add_func("/gitrlz/commit-diff/file-headings", test_each_changed_file_gets_a_heading);
 	Test.add_func("/gitrlz/commit-diff/merge-first-parent", test_a_merge_reads_against_its_first_parent);
 
