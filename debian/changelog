@@ -1,3 +1,28 @@
+gitrl-z (0.5.0-1) noble; urgency=medium
+
+  * Offer the diff of a commit and its full hash from a right click on any row
+    of the reflog list or of the graph. The diff opens in a window of its own,
+    transient for the main one, and one window serves every commit.
+  * Show that diff in gitg's own diff pane, vendored from gitg 44: a section
+    per changed file, two columns of line numbers, the image and binary
+    renderers, and the options bar at the foot. The words that changed inside
+    a changed line keep their mark.
+  * Add the gravatar, syntax highlighting and colour scheme rows to the
+    preferences dialog, as gitg has them.
+  * Open the diff window maximised, since a diff fits neither dimension of a
+    fixed size.
+  * Redraw the application icon without its black tile and author it as SVG.
+    Each installed PNG is rendered at its own size.
+  * Name the window icon at startup, so a window list or a task switcher finds
+    it instead of falling back to the name of the binary.
+  * Ship the AppImage's own GSettings schema. The GTK plugin of linuxdeploy
+    replaced it with the build machine's copy, which aborted the AppImage at
+    startup on a missing key.
+  * Add a build dependency on gtksourceview-4, which gitg's diff renderer
+    needs. Raise the GTK minimum from 3.20 to 3.22.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Mon, 10 Aug 2026 21:05:00 +0200
+
 gitrl-z (0.4.0-1) noble; urgency=medium
 
   * Show the absolute timestamp when hovering over the date column.

@@ -63,6 +63,20 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.5.0" date="2026-08-10">
+      <description>
+        <p>
+          Open the diff of any commit in the reflog list or the graph from a
+          right click, and copy its full hash from the same menu.
+        </p>
+        <p>
+          Show that diff in gitg's own diff pane, with a section per changed
+          file, numbered lines, syntax highlighting, and renderers for images
+          and binary files.
+        </p>
+        <p>Redraw the application icon and put it on the window.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-08-06">
       <description>
         <p>Show the absolute timestamp when hovering over the date column.</p>
