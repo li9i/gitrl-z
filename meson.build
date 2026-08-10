@@ -51,14 +51,19 @@ glib_req_version = '>= 2.68'
 
 # Dependencies.
 #
-# This list is gitrl-z's own, not a copy of gitg's. gitg
-# additionally needs gtksourceview-4, gspell, json-glib, libsecret, gpgme,
-# libpeas and libxml2; every one of those falls out with the subsystems
-# gitrl-z does not build.
+# This list is gitrl-z's own, not a copy of gitg's. gitg additionally needs
+# gspell, json-glib, libsecret, gpgme, libpeas and libxml2; every one of those
+# falls out with the subsystems gitrl-z does not build.
+#
+# gtksourceview-4 was in that list until the diff pane arrived. gitg's diff
+# renderer *is* a Gtk.SourceView, for its gutter renderers, its source marks
+# and its syntax colours, and the pane is vendored rather than imitated, so the
+# dependency comes with it.
 gee_dep = dependency('gee-0.8')
 gio_dep = dependency('gio-2.0', version: glib_req_version)
 glib_dep = dependency('glib-2.0', version: glib_req_version)
 gtk_dep = dependency('gtk+-3.0', version: '>= 3.22.0')
+gtksourceview_dep = dependency('gtksourceview-4', version: '>= 4.0')
 gdk_dep = dependency('gdk-3.0')
 hdy_dep = dependency('libhandy-1', version: '>= 1.5.0')
 libgit2_glib_dep = dependency('libgit2-glib-1.0', version: '>= 1.1.0')

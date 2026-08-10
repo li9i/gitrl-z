@@ -1,0 +1,379 @@
+--- vendor/upstream/libgitg/gitg-diff-view-file-renderer-text.vala	2023-08-03 13:36:24.000000000 +0200
++++ src/vendor-gitg/libgitg/gitg-diff-view-file-renderer-text.vala	2026-08-10 20:22:18.219427374 +0200
+@@ -17,9 +17,45 @@
+  * along with gitg. If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++/**
++ * The words of a pair of lines that differ, as byte offsets into each line.
++ *
++ * A flat array of start and end offsets in pairs, `{ start, end, start, ... }`.
++ * Returns false when the pair takes no refinement, and then neither array is
++ * read.
++ *
++ * gitrl-z addition. The algorithm lives in the application, which this library
++ * cannot name, so it arrives as a function instead.
++ */
++public delegate bool Gitg.WordMarksFunc(string removed,
++                                        string added,
++                                        out int[] removed_spans,
++                                        out int[] added_spans);
++
++/**
++ * Where the application leaves its word marker for the renderer to find.
++ *
++ * gitrl-z addition. A holder of its own, rather than a field on the renderer,
++ * because the renderer is internal to this library and the application has to
++ * reach this from outside it.
++ */
++public class Gitg.WordMarks : Object
++{
++	/** Null leaves every line with the tint of its kind, as gitg has it. */
++	public static WordMarksFunc? func = null;
++}
++
+ [GtkTemplate (ui = "/org/gnome/gitg/ui/gitg-diff-view-file-renderer-text.ui")]
+-class Gitg.DiffViewFileRendererText : Gtk.SourceView, DiffSelectable, DiffViewFileRenderer, DiffViewFileRendererTextable
++class Gitg.DiffViewFileRendererText : Gtk.SourceView, DiffViewFileRenderer, DiffViewFileRendererTextable
+ {
++	/** One line as it was inserted, for the word marks to be applied to. */
++	private struct MarkedLine
++	{
++		public bool added;
++		public int buffer_line;
++		public string text;
++	}
++
+ 	private enum RegionType
+ 	{
+ 		ADDED,
+@@ -45,11 +81,6 @@
+ 	public uint added { get; set; }
+ 	public uint removed { get; set; }
+ 
+-	private int64 d_doffset;
+-
+-	private Gee.HashMap<int, PatchSet.Patch?> d_lines;
+-
+-	private DiffViewFileSelectable d_selectable;
+ 	private DiffViewLinesRenderer d_old_lines;
+ 	private DiffViewLinesRenderer d_new_lines;
+ 	private DiffViewLinesRenderer d_sym_lines;
+@@ -68,7 +99,6 @@
+ 	private Settings? d_stylesettings;
+ 
+ 	private FontManager d_font_manager;
+-	private bool d_has_selection;
+ 
+ 	public Style d_style { get; construct set; }
+ 
+@@ -124,65 +154,8 @@
+ 		}
+ 	}
+ 
+-	public void clear_selection()
+-	{
+-		d_has_selection = false;
+-	}
+-
+-	public bool has_selection
+-	{
+-		get { return d_has_selection; }
+-	}
+-
+ 	public bool can_select { get; construct set; }
+ 
+-	public PatchSet selection
+-	{
+-		owned get
+-		{
+-			var ret = new PatchSet();
+-
+-			ret.filename = delta.get_new_file().get_path();
+-
+-			var patches = new PatchSet.Patch[0];
+-
+-			if (!can_select)
+-			{
+-				return ret;
+-			}
+-
+-			var selected = d_selectable.get_selected_lines();
+-
+-			for (var i = 0; i < selected.length; i++)
+-			{
+-				var line = selected[i];
+-				var pset = d_lines[line];
+-
+-				if (i == 0)
+-				{
+-					patches += pset;
+-					continue;
+-				}
+-
+-				var last = patches[patches.length - 1];
+-
+-				if (last.new_offset + last.length == pset.new_offset &&
+-				    last.type == pset.type)
+-				{
+-					last.length += pset.length;
+-					patches[patches.length - 1] = last;
+-				}
+-				else
+-				{
+-					patches += pset;
+-				}
+-			}
+-
+-			ret.patches = patches;
+-			return ret;
+-		}
+-	}
+-
+ 	public DiffViewFileRendererText(DiffViewFileInfo info, bool can_select, Style style)
+ 	{
+ 		Object(info: info, can_select: can_select, d_style: style);
+@@ -245,18 +218,6 @@
+ 
+ 		update_theme();
+ 
+-		if (can_select)
+-		{
+-			d_selectable = new DiffViewFileSelectable(this);
+-
+-			d_selectable.notify["has-selection"].connect(() => {
+-				d_has_selection = d_selectable.has_selection;
+-				notify_property("has-selection");
+-			});
+-		}
+-
+-		d_lines = new Gee.HashMap<int, PatchSet.Patch?>();
+-
+ 		highlight = true;
+ 	}
+ 
+@@ -671,6 +632,31 @@
+ 		this.set_mark_attributes("header", header_attributes, 0);
+ 		this.set_mark_attributes("added", added_attributes, 0);
+ 		this.set_mark_attributes("removed", removed_attributes, 0);
++
++		update_word_mark_tags(dark);
++	}
++
++	/**
++	 * The tags that mark the changed words, in a stronger shade of the line.
++	 *
++	 * gitrl-z addition (spec FR-178). A background rather than an underline, so
++	 * the mark reads at a glance; the syntax colours are foregrounds and stay
++	 * legible through it.
++	 */
++	private void update_word_mark_tags(bool dark)
++	{
++		var table = this.buffer.tag_table;
++
++		foreach (var name in new string[] { "word-added", "word-removed" })
++		{
++			if (table.lookup(name) == null)
++			{
++				this.buffer.create_tag(name);
++			}
++		}
++
++		table.lookup("word-added").background = dark ? "#3a7a26" : "#a8f0a8";
++		table.lookup("word-removed").background = dark ? "#b04e4a" : "#ffb0b0";
+ 	}
+ 
+ 	protected override void constructed()
+@@ -681,6 +667,79 @@
+ 		update_highlight();
+ 	}
+ 
++	/**
++	 * Marks the words that differ, over one run of removed and added lines.
++	 *
++	 * gitrl-z addition (spec FR-178). The first removed line is paired with the
++	 * first added line, the second with the second, and so on. A line with no
++	 * counterpart, and a pair the marker declines, keep the tint of their kind
++	 * and nothing more. The two lists are emptied, ready for the next run.
++	 */
++	private void apply_word_marks(Gtk.SourceBuffer buffer,
++	                              Gee.List<MarkedLine?> removed,
++	                              Gee.List<MarkedLine?> added)
++	{
++		if (WordMarks.func != null)
++		{
++			var pairs = int.min(removed.size, added.size);
++
++			for (var i = 0; i < pairs; i++)
++			{
++				var was = removed[i];
++				var now = added[i];
++
++				int[] removed_spans;
++				int[] added_spans;
++
++				if (!WordMarks.func(was.text, now.text,
++				                out removed_spans, out added_spans))
++				{
++					continue;
++				}
++
++				mark_words(buffer, was, removed_spans, "word-removed");
++				mark_words(buffer, now, added_spans, "word-added");
++			}
++		}
++
++		removed.clear();
++		added.clear();
++	}
++
++	/** Puts `tag` over the spans of one line, or nothing if it is not shown. */
++	private static void mark_words(Gtk.SourceBuffer buffer,
++	                               MarkedLine line,
++	                               int[] spans,
++	                               string tag)
++	{
++		if (line.buffer_line < 0)
++		{
++			return;
++		}
++
++		for (var i = 0; i + 1 < spans.length; i += 2)
++		{
++			Gtk.TextIter start;
++			Gtk.TextIter end;
++
++			// The spans are byte offsets, because they index a string. A text
++			// buffer counts characters, and the two part company on the first
++			// line that holds anything outside ASCII.
++			buffer.get_iter_at_line_offset(out start, line.buffer_line,
++			                               char_offset(line.text, spans[i]));
++			buffer.get_iter_at_line_offset(out end, line.buffer_line,
++			                               char_offset(line.text, spans[i + 1]));
++
++			buffer.apply_tag_by_name(tag, start, end);
++		}
++	}
++
++	/** The character offset of a byte offset into `text`. */
++	private static int char_offset(string text, int bytes)
++	{
++		return text.substring(0, bytes).char_count();
++	}
++
+ 	public void add_hunk(Ggit.DiffHunk hunk, Gee.ArrayList<Ggit.DiffLine> lines)
+ 	{
+ 		var buffer = this.buffer as Gtk.SourceBuffer;
+@@ -726,6 +785,15 @@
+ 		var add_line_num = 0;
+ 		var remove_line_num = 0;
+ 		var in_change_line = false;
++
++		// The lines of the run being read, for the word marks. A run is the
++		// removed lines of one change and the added lines that follow them, and
++		// it ends at the next context line. Every style sees both sides of the
++		// hunk, so a split half can find the pairs and mark only its own lines:
++		// the lines it did not insert are held with no buffer line.
++		var marked_removed = new Gee.ArrayList<MarkedLine?>();
++		var marked_added = new Gee.ArrayList<MarkedLine?>();
++
+ 		for (var i = 0; i < lines.size; i++)
+ 		{
+ 			var line = lines[i];
+@@ -791,31 +859,6 @@
+ 			if (d_style == Style.ONE)
+ 				region.length++;
+ 
+-			if (added || removed)
+-			{
+-				var offset = (size_t)line.get_content_offset();
+-				var bytes = line.get_content();
+-
+-				var pset = PatchSet.Patch() {
+-					type = added ? PatchSet.Type.ADD : PatchSet.Type.REMOVE,
+-					old_offset = offset,
+-					new_offset = offset,
+-					length = bytes.length
+-				};
+-
+-				if (added)
+-				{
+-					pset.old_offset = (size_t)((int64)pset.old_offset - d_doffset);
+-				}
+-				else
+-				{
+-					pset.new_offset = (size_t)((int64)pset.new_offset + d_doffset);
+-				}
+-
+-				d_lines[buffer_line] = pset;
+-				d_doffset += added ? (int64)bytes.length : -(int64)bytes.length;
+-			}
+-
+ 			if (i == lines.size - 1 && text.length > 0 && text[text.length - 1] == '\n')
+ 			{
+ 				text = text.slice(0, text.length - 1);
+@@ -823,6 +866,10 @@
+ 
+ 			if (rtype == RegionType.CONTEXT)
+ 			{
++				// A context line ends the run, thus the marks of the run are
++				// applied before this line moves the buffer on.
++				apply_word_marks(buffer, marked_removed, marked_added);
++
+ 				if (d_style == Style.OLD || d_style == Style.NEW)
+ 				{
+ 					if (in_change_line == true)
+@@ -879,6 +926,14 @@
+ 				buffer.get_end_iter(out t_iter);
+ 				buffer.create_source_mark(null, mark, t_iter);
+ 
++				var marked = MarkedLine() {
++					added = mark == "added",
++					buffer_line = buffer_line,
++					text = text
++				};
++
++				(marked.added ? marked_added : marked_removed).add(marked);
++
+ 				buffer.insert(ref iter, text, -1);
+ 				buffer_line++;
+ 				if (d_style == Style.OLD || d_style == Style.NEW)
+@@ -907,6 +962,17 @@
+ 			{
+ 				if (d_style == Style.OLD || d_style == Style.NEW)
+ 				{
++					// The other side's line. This half does not show it, and
++					// still needs its text to pair the words, thus it is held
++					// with no buffer line of its own.
++					var marked = MarkedLine() {
++						added = rtype == RegionType.ADDED,
++						buffer_line = -1,
++						text = text
++					};
++
++					(marked.added ? marked_added : marked_removed).add(marked);
++
+ 					if (d_style == Style.OLD)
+ 						add_line_num++;
+ 					else
+@@ -917,12 +983,20 @@
+ 					buffer.get_end_iter(out t_iter);
+ 					buffer.create_source_mark(null, "added", t_iter);
+ 
++					marked_added.add(MarkedLine() {
++						added = true,
++						buffer_line = buffer_line,
++						text = text
++					});
++
+ 					buffer.insert(ref iter, text, -1);
+ 					buffer_line++;
+ 				}
+ 			}
+ 		}
+ 
++		apply_word_marks(buffer, marked_removed, marked_added);
++
+ 		if (lines.size != 0)
+ 		{
+ 			d_regions += region;

@@ -167,6 +167,27 @@ public class Repo : Object
 	}
 
 	/**
+	 * Write a file from raw bytes, stage everything and commit.
+	 *
+	 * `commit` goes through FileUtils.set_contents and so carries text only. A
+	 * test that needs git to call a file binary, or needs a real image, needs
+	 * bytes: a NUL in the first bytes is what git reads as binary, and an image
+	 * has to be a valid one before the pane will render it.
+	 */
+	public string commit_bytes(string message, string filename, uint8[] content) throws Error
+	{
+		var target = path.get_child(filename);
+
+		target.replace_contents(content, null, false, FileCreateFlags.REPLACE_DESTINATION,
+		                        null, null);
+
+		git({"add", "--all"});
+		git({"commit", "--quiet", "-m", message});
+
+		return git({"rev-parse", "HEAD"}).strip();
+	}
+
+	/**
 	 * Delete a branch outright, as `git branch -D` does.
 	 *
 	 * Lets a test set up a deleted-branch recovery: the branch's name survives

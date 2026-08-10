@@ -1,0 +1,77 @@
+--- vendor/upstream/libgitg/gitg-diff-view-file.vala	2023-08-03 13:36:24.000000000 +0200
++++ src/vendor-gitg/libgitg/gitg-diff-view-file.vala	2026-08-10 20:13:10.785735800 +0200
+@@ -57,13 +57,6 @@
+ 			{
+ 				d_expanded = value;
+ 				d_revealer_content.reveal_child = d_expanded;
+-				bool visible = false;
+-				if (d_expanded)
+-				{
+-					visible = d_stack_file_renderer.get_children().length() > 1;
+-				}
+-				d_stack_switcher.set_visible(visible);
+-
+ 
+ 				var ctx = get_style_context();
+ 
+@@ -82,45 +75,29 @@
+ 	public DiffViewFileInfo? info {get; construct set;}
+ 	private Gee.HashMap<Gtk.Widget, bool> d_diff_stat_visible_map = new Gee.HashMap<Gtk.Widget, bool>();
+ 
+-	public bool has_selection()
+-	{
+-		bool has_selection = false;
+-		foreach (DiffViewFileRenderer renderer in renderer_list)
+-		{
+-			var selectable = renderer as DiffSelectable;
+-			if (selectable != null)
+-				has_selection = selectable.has_selection;
+-			if (has_selection)
+-				break;
+-		}
+-		return has_selection;
+-	}
+-
+-	public void clear_selection()
+-	{
+-		foreach (var renderer in renderer_list)
+-		{
+-			var sel = renderer as DiffSelectable;
+-			sel.clear_selection();
+-		}
+-	}
++	private string d_renderer_name = "splittext";
+ 
+-	public PatchSet get_selection()
++	/**
++	 * The renderer this file shows, by its name in the stack.
++	 *
++	 * gitrl-z chooses the renderer for the whole window rather than per file,
++	 * thus the switcher is never shown and this stands in for it. A name the
++	 * stack does not hold, "splittext" for an image, leaves the renderer as it
++	 * is.
++	 */
++	public string renderer_name
+ 	{
+-		var ret = new PatchSet();
++		get { return d_renderer_name; }
+ 
+-		foreach (var renderer in renderer_list)
++		set
+ 		{
+-			var sel = renderer as DiffSelectable;
++			d_renderer_name = value;
+ 
+-			if (sel != null && sel.has_selection && sel.selection.patches.length != 0)
++			if (d_stack_file_renderer.get_child_by_name(d_renderer_name) != null)
+ 			{
+-				ret = sel.selection;
+-				break;
++				d_stack_file_renderer.visible_child_name = d_renderer_name;
+ 			}
+ 		}
+-
+-		return ret;
+ 	}
+ 
+ 	public DiffViewFile(DiffViewFileInfo? info)

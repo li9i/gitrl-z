@@ -12,8 +12,6 @@ gitrlz_lib_sources = files(
   'gitrlz-cell-renderer-branch.vala',
   'gitrlz-cell-renderer-message.vala',
   'gitrlz-cell-renderer-operations.vala',
-  'gitrlz-commit-diff.vala',
-  'gitrlz-diff-view.vala',
   'gitrlz-diff-window.vala',
   'gitrlz-monitor.vala',
   'gitrlz-preferences-dialog.vala',
@@ -40,6 +38,7 @@ gitrlz_resources = gnome.compile_resources(
 
 gitrlz_deps = [
   vendor_gitg_dep,
+  gtksourceview_dep,
   hdy_dep,
 ]
 

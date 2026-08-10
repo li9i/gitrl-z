@@ -1,0 +1,119 @@
+--- vendor/upstream/libgitg/gitg-diff-view.vala	2023-08-03 13:36:24.000000000 +0200
++++ src/vendor-gitg/libgitg/gitg-diff-view.vala	2026-08-10 20:16:04.588941129 +0200
+@@ -72,11 +72,6 @@
+ 		}
+ 	}
+ 
+-	public bool has_selection
+-	{
+-		get; private set;
+-	}
+-
+ 	public Ggit.Diff? diff
+ 	{
+ 		get { return d_diff; }
+@@ -115,6 +110,31 @@
+ 		}
+ 	}
+ 
++	private string d_renderer_name = "splittext";
++
++	/**
++	 * The renderer every file of the pane shows, by its name in the stack.
++	 *
++	 * gitrl-z switches the whole window at once rather than a file at a time,
++	 * thus this stands in for the per-file switcher, which is never shown. A
++	 * file whose stack has no renderer of that name, an image or a binary,
++	 * keeps the one it has.
++	 */
++	public string renderer_name
++	{
++		get { return d_renderer_name; }
++
++		set
++		{
++			d_renderer_name = value;
++
++			foreach (var file in d_grid_files.get_children())
++			{
++				((Gitg.DiffViewFile) file).renderer_name = d_renderer_name;
++			}
++		}
++	}
++
+ 	public bool wrap_lines { get; construct set; default = true; }
+ 	public bool staged { get; set; default = false; }
+ 	public bool unstaged { get; set; default = false; }
+@@ -639,25 +659,6 @@
+ 		SignalHandler.unblock(d_commit_details, d_expanded_notify);
+ 	}
+ 
+-	private void on_selection_changed()
+-	{
+-		bool something_selected = false;
+-
+-		foreach (var file in d_grid_files.get_children())
+-		{
+-			if (((Gitg.DiffViewFile) file).has_selection())
+-			{
+-				something_selected = true;
+-				break;
+-			}
+-		}
+-
+-		if (has_selection != something_selected)
+-		{
+-			has_selection = something_selected;
+-		}
+-	}
+-
+ 	private string? primary_path(Ggit.DiffDelta delta)
+ 	{
+ 		var path = delta.get_old_file().get_path();
+@@ -850,10 +851,8 @@
+ 								bind_property("wrap-lines", renderer_text, "wrap-lines", BindingFlags.DEFAULT | BindingFlags.SYNC_CREATE);
+ 								bind_property("tab-width", renderer_text, "tab-width", BindingFlags.DEFAULT | BindingFlags.SYNC_CREATE);
+ 								renderer_text.maxlines = maxlines;
+-								renderer_text.notify["has-selection"].connect(on_selection_changed);
+ 							}
+ 						}
+-						on_selection_changed();
+ 					}
+ 					if (current_is_binary)
+ 					{
+@@ -1030,6 +1029,8 @@
+ 				file.vexpand = true;
+ 			}
+ 
++			file.renderer_name = renderer_name;
++
+ 			d_grid_files.add(file);
+ 
+ 			file.notify["expanded"].connect(auto_update_expanded);
+@@ -1050,26 +1051,6 @@
+ 		auto_change_expanded(true);
+ 	}
+ 
+-	public PatchSet[] get_selection()
+-	{
+-		var ret = new PatchSet[0];
+-
+-		foreach (var file in d_grid_files.get_children())
+-		{
+-			ret += ((Gitg.DiffViewFile)file).get_selection();
+-		}
+-
+-		return ret;
+-	}
+-
+-	public void clear_selection()
+-	{
+-		foreach (var file in d_grid_files.get_children())
+-		{
+-			((Gitg.DiffViewFile)file).clear_selection();
+-		}
+-	}
+-
+ 	private void update_hide_show_options(Gdk.Window window, int ex, int ey)
+ 	{
+ 		void *data;

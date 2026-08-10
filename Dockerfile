@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgit2-glib-1.0-dev \
         libglib2.0-dev \
         libgtk-3-dev \
+        libgtksourceview-4-dev \
         libhandy-1-dev \
         libxml2-utils \
         meson \

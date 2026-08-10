@@ -38,7 +38,6 @@ unit_tests = [
   'settings',
   'annotations',
   'branch-colours',
-  'commit-diff',
   'reflog',
   'reflog-filter',
   'repository-state',
@@ -84,7 +83,7 @@ xvfb_wrapper = find_program('ui/run-xvfb.sh')
 
 ui_tests = [
   'window',
-  'diff-view',
+  'diff-pane',
   'reflog-activity',
   'reflog-limits',
 ]

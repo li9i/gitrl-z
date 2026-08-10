@@ -14,7 +14,8 @@ Ubuntu 24.04 or equivalent is necessary:
 sudo apt-get install build-essential desktop-file-utils \
     gsettings-desktop-schemas-dev libdazzle-1.0-dev libgee-0.8-dev \
     libgirepository1.0-dev libgit2-glib-1.0-dev libglib2.0-dev \
-    libgtk-3-dev libhandy-1-dev libxml2-utils meson pkgconf valac
+    libgtk-3-dev libgtksourceview-4-dev libhandy-1-dev libxml2-utils meson \
+    pkgconf valac
 
 meson setup _build
 ninja -C _build

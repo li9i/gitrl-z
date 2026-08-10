@@ -130,6 +130,54 @@ private static void test_marks_land_on_the_right_bytes_past_a_wide_character()
 	assert_cmpstr(marked(new_line, new_spans), CompareOperator.EQ, "gamma");
 }
 
+private static void test_the_flat_form_carries_the_same_offsets()
+{
+	// The diff renderer is vendored gitg code and cannot name Gitrlz.WordSpan,
+	// so it asks for the spans as a flat array of start and end offsets. The two
+	// forms have to agree, or the marks land on the wrong bytes.
+	Gitrlz.WordSpan[] old_spans;
+	Gitrlz.WordSpan[] new_spans;
+	int[] old_flat;
+	int[] new_flat;
+
+	var old_line = "one two three four";
+	var new_line = "one six three four";
+
+	assert_true(Gitrlz.WordDiff.refine(old_line, new_line,
+	                                   out old_spans, out new_spans));
+	assert_true(Gitrlz.WordDiff.refine_flat(old_line, new_line,
+	                                        out old_flat, out new_flat));
+
+	assert_cmpint(old_flat.length, CompareOperator.EQ, old_spans.length * 2);
+	assert_cmpint(new_flat.length, CompareOperator.EQ, new_spans.length * 2);
+
+	for (var i = 0; i < old_spans.length; i++)
+	{
+		assert_cmpint(old_flat[i * 2], CompareOperator.EQ, old_spans[i].start);
+		assert_cmpint(old_flat[i * 2 + 1], CompareOperator.EQ, old_spans[i].end);
+	}
+
+	for (var i = 0; i < new_spans.length; i++)
+	{
+		assert_cmpint(new_flat[i * 2], CompareOperator.EQ, new_spans[i].start);
+		assert_cmpint(new_flat[i * 2 + 1], CompareOperator.EQ, new_spans[i].end);
+	}
+}
+
+private static void test_the_flat_form_declines_where_refine_declines()
+{
+	// A pair with nothing in common takes no marks in either form, and the
+	// renderer then leaves the line with its tint.
+	int[] old_flat;
+	int[] new_flat;
+
+	assert_false(Gitrlz.WordDiff.refine_flat("alpha beta gamma", "nothing alike here",
+	                                         out old_flat, out new_flat));
+
+	assert_cmpint(old_flat.length, CompareOperator.EQ, 0);
+	assert_cmpint(new_flat.length, CompareOperator.EQ, 0);
+}
+
 private static void test_an_identical_line_takes_no_marks()
 {
 	Gitrlz.WordSpan[] old_spans;
@@ -158,6 +206,8 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/word-diff/punctuation", test_punctuation_is_its_own_word);
 	Test.add_func("/gitrlz/word-diff/unrelated-lines", test_two_unrelated_lines_take_no_marks);
 	Test.add_func("/gitrlz/word-diff/wide-characters", test_marks_land_on_the_right_bytes_past_a_wide_character);
+	Test.add_func("/gitrlz/word-diff/flat-form-agrees", test_the_flat_form_carries_the_same_offsets);
+	Test.add_func("/gitrlz/word-diff/flat-form-declines", test_the_flat_form_declines_where_refine_declines);
 	Test.add_func("/gitrlz/word-diff/identical-lines", test_an_identical_line_takes_no_marks);
 	Test.add_func("/gitrlz/word-diff/empty-line", test_an_empty_line_takes_no_marks);
 

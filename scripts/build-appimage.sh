@@ -32,7 +32,22 @@ ninja -C "$work/build"
 rm -rf "$appdir"
 DESTDIR="$PWD/$appdir" ninja -C "$work/build" install
 
-# 2. Fetch the tools once (continuous builds, as AppImage upstream ships them).
+# 2. Carry GtkSourceView's data beside the library.
+#
+# linuxdeploy bundles the libraries a binary links, and nothing else. The
+# language definitions and the style schemes of GtkSourceView are data, so
+# without this the diff pane highlights nothing on a machine that has no
+# gtksourceview installed, and says nothing about why.
+sourceview_data=/usr/share/gtksourceview-4
+
+if [ -d "$sourceview_data" ]; then
+	mkdir -p "$appdir/usr/share"
+	cp -r "$sourceview_data" "$appdir/usr/share/"
+else
+	echo "warning: $sourceview_data is absent; the AppImage will not highlight" >&2
+fi
+
+# 3. Fetch the tools once (continuous builds, as AppImage upstream ships them).
 mkdir -p "$tools"
 fetch() { [ -f "$tools/$2" ] || curl -fsSL -o "$tools/$2" "$1"; }
 ld=https://github.com/linuxdeploy
@@ -43,7 +58,7 @@ chmod +x "$tools"/*.AppImage "$tools/linuxdeploy-plugin-gtk.sh"
 # linuxdeploy looks for `appimagetool` on PATH; give it one.
 ln -sf appimagetool-x86_64.AppImage "$tools/appimagetool"
 
-# 3. Bundle everything and emit the AppImage into the repository root.
+# 4. Bundle everything and emit the AppImage into the repository root.
 rm -f "$root"/gitrl-z-*-x86_64.AppImage
 APPIMAGE_EXTRACT_AND_RUN=1 DEPLOY_GTK_VERSION=3 VERSION="$version" \
 PATH="$PWD/$tools:$PATH" \

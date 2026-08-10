@@ -1,0 +1,43 @@
+--- vendor/upstream/libgitg/gitg-diff-view-file-renderer-text-split.vala	2023-08-03 13:36:24.000000000 +0200
++++ src/vendor-gitg/libgitg/gitg-diff-view-file-renderer-text-split.vala	2026-08-10 19:51:32.247433444 +0200
+@@ -18,7 +18,7 @@
+  */
+ 
+ [GtkTemplate (ui = "/org/gnome/gitg/ui/gitg-diff-view-file-renderer-text-split.ui")]
+-class Gitg.DiffViewFileRendererTextSplit : Gtk.Box, DiffSelectable, DiffViewFileRenderer, DiffViewFileRendererTextable
++class Gitg.DiffViewFileRendererTextSplit : Gtk.Box, DiffViewFileRenderer, DiffViewFileRendererTextable
+ {
+ 	[GtkChild( name = "scroll_left" )]
+ 	private unowned Gtk.ScrolledWindow d_scroll_left;
+@@ -119,31 +119,5 @@
+ 		d_renderer_right.add_hunk(hunk, lines);
+ 	}
+ 
+-	public bool has_selection
+-	{
+-		get
+-		{
+-			//return d_renderer_left.has_selection() || d_renderer_right.has_selection();
+-			return false;
+-		}
+-	}
+-
+-	public void clear_selection()
+-	{
+-	}
+-
+ 	public bool can_select { get; construct set; }
+-
+-	public PatchSet selection
+-	{
+-		owned get
+-		{
+-			/*if (d_renderer_left.has_selection())
+-				return d_renderer_left.get_selection();
+-			if (d_renderer_right.has_selection())
+-				return d_renderer_right.get_selection();
+-			*/
+-			return new PatchSet();
+-		}
+-	}
+ }

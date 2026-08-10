@@ -10,8 +10,12 @@ Regenerate any patch with:
 
 Run this after `vendor/fetch-upstream.sh` populates `vendor/upstream/`.
 
-Six files have patches. Everything else in `src/vendor-gitg/` is
+Eleven files have patches. Everything else in `src/vendor-gitg/` is
 byte-identical to gitg 44.
+
+Five of the eleven are the diff pane, and all five have the same cause. It is
+written out once under `gitg-diff-view-file-renderer-text.patch` and referred
+to from the other four.
 
 ## gitg-repository.patch
 
@@ -126,3 +130,127 @@ This leaves `d_languages_box` bound to the template but not populated. The
 compiler gives a note for this unused field. The field stays because it is a
 `[GtkChild]` bound to `ui/gitg-repository-list-box-row.ui`. To remove the
 field, you must also edit that file, with no improvement to the code.
+
+## gitg-diff-view-file-renderer-text.patch
+
+Two changes: the selection comes out, and the word marks go in.
+
+**1. Removes the line selection from gitg's diff renderer: the `DiffSelectable`
+interface from the class declaration, the `d_selectable`, `d_lines`,
+`d_has_selection` and `d_doffset` fields, the `has_selection` property,
+`clear_selection()`, the `selection` property, and the `PatchSet.Patch` that
+the hunk loop built for every added and removed line.
+
+**Why.** `PatchSet` is declared in `gitg-stage.vala`. That file is gitg's
+staging area and its main write path, and `gitg-repository.patch` already
+removed the property that reaches it, so that neither it, nor
+`gitg-hook.vala`, nor their gpgme dependency enter the closure. Spec NFR-4
+requires that no write path is compiled in. Vendoring the renderer as it
+stands would put all of it back for a feature gitrl-z cannot use: a selection
+is only worth making if something can stage it, and nothing here can.
+
+Two things stay that a first reading might expect to go. `can_select` remains a
+construct property of the renderer, and `handle_selection` remains one of
+`Gitg.DiffView`, because both are constructor parameters: removing them would
+push the patch into every call site for no gain. Both are false in gitrl-z, as
+they are in gitg's own history panel.
+
+The `added` and `removed` counters, the regions array and the source marks all
+stay. The stat badge and the line tints read them, and they have nothing to do
+with selection.
+
+**Cost.** No line or hunk selection in the pane. gitg's history panel does not
+offer it either: it constructs `Gitg.DiffView` with `handle_selection` false,
+which is the pane gitrl-z copies. The behaviour lost is one gitg only shows in
+its Commit activity, which is out of scope (spec 1.3).
+
+**2. Marks the words that changed inside a changed line** (spec FR-178). gitg
+tints the whole line and leaves the reader to find the word. This is the one
+behaviour gitrl-z adds to the pane, and the only one it keeps from the
+hand-written view the pane replaced.
+
+The addition is four parts:
+
+- `Gitg.WordMarksFunc`, a delegate: two lines in, the differing words out as
+  byte offsets.
+- `Gitg.WordMarks`, a holder with one static field for that delegate.
+  `Gitrlz.DiffWindow` fills it in its static construct. It is a class of its own
+  because the renderer is internal to this library, and the application has to
+  reach the field from outside it. The delegate takes no type of the
+  application's namespace, so the dependency still runs one way only: the
+  vendored library knows nothing of `Gitrlz`.
+- Two buffer tags, `word-added` and `word-removed`, coloured beside the source
+  marks of the line tints, in a stronger shade of the same hue and following the
+  theme the same way.
+- A pairing pass in `add_hunk`. The first removed line of a change is paired
+  with the first added line, the second with the second, and the run ends at the
+  next context line. Every instance of the renderer walks every line of the
+  hunk whatever its style, so a split half finds the pairs from both sides and
+  marks only the lines it inserted; the lines it does not show are held with no
+  buffer line. A line with no counterpart, and a pair the marker declines, keep
+  their tint and take no marks.
+
+With the field left null the renderer behaves exactly as gitg's: tints and no
+marks.
+
+## gitg-diff-view-file-renderer-text-split.patch
+
+The same removal, in the split renderer: the `DiffSelectable` interface, the
+`has_selection` property, `clear_selection()` and the `selection` property.
+
+Upstream had already commented out the bodies of all three: the split view
+reported no selection and returned an empty `PatchSet`. What goes is therefore
+three members that did nothing but name a type from `gitg-stage.vala`.
+`can_select` stays, for the cause given above.
+
+## gitg-diff-view-file-renderer-textable.patch
+
+Drops `DiffSelectable` from the interface's base list, one line.
+
+**Why.** The interface is implemented by the two renderers above, and neither
+implements `DiffSelectable` any more.
+
+## gitg-diff-view-file.patch
+
+Two changes.
+
+**1. Removes `has_selection()`, `clear_selection()` and `get_selection()`,**
+which walked the renderers of one file asking each for its selection.
+
+Their return type or their cast names `DiffSelectable` or `PatchSet`. Nothing
+calls them once `gitg-diff-view.patch` lands.
+
+**2. Adds `renderer_name`, and stops the per-file switcher from ever showing.**
+
+gitg puts a `Unif` / `Split` switcher in the header of every file. gitrl-z shows
+one commit per window and switches every file at once, from one control in the
+title bar (spec FR-176), so the per-file switcher would be a second way to do
+the same thing in the same window.
+
+`renderer_name` is the property that stands in for the switcher: it sets the
+stack's visible child, and ignores a name the stack does not hold, which is what
+leaves an image or a binary section alone. The `expanded` setter loses the two
+lines that made the switcher visible.
+
+This leaves `d_stack_switcher` bound to the template but never read, and the
+compiler notes the unused field. It stays for the same cause as
+`d_languages_box` above: removing it means editing
+`ui/gitg-diff-view-file.ui` as well, with no improvement to the code.
+
+## gitg-diff-view.patch
+
+Two changes.
+
+**1. Removes the `has_selection` property, `on_selection_changed()` and the two
+calls to it, `get_selection()` and `clear_selection()`.**
+
+The same cause as the renderer. `get_selection()` returns `PatchSet[]`, and the
+rest exist to keep that property in step with the renderers.
+
+`handle_selection` stays, as stated above, and is false.
+
+**2. Adds `renderer_name`, the pane-wide counterpart of the property above.**
+
+Setting it sets the property of every file the pane holds, and every file the
+pane builds afterwards takes the current value. `Gitrlz.DiffWindow` drives it
+from the title bar and remembers it in the `state.diff` schema.

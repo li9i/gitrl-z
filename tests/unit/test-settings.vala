@@ -42,6 +42,62 @@ private static void test_interface_defaults()
 	assert_true(s.get_boolean("use-default-font"));
 	assert_cmpstr(s.get_string("monospace-font-name"), CompareOperator.EQ, "Monospace 12");
 	assert_true(s.get_boolean("enable-monitoring"));
+
+	// The three keys the diff pane reads (spec IC-177). Avatars are off by
+	// default, as in gitg, so no diff reaches the network unasked.
+	assert_false(s.get_boolean("use-gravatar"));
+	assert_true(s.get_boolean("enable-diff-highlighting"));
+	assert_cmpstr(s.get_string("style-scheme"), CompareOperator.EQ, "classic");
+}
+
+private static void test_diff_defaults()
+{
+	var s = settings_for("preferences.diff");
+
+	// Every default is gitg's own (spec NFR-51), including the two that read
+	// as surprising: lines do not wrap, and whitespace is not ignored.
+	assert_false(s.get_boolean("ignore-whitespace"));
+	assert_false(s.get_boolean("changes-inline"));
+	assert_false(s.get_boolean("wrap"));
+	assert_cmpint(s.get_int("context-lines"), CompareOperator.EQ, 3);
+	assert_cmpint(s.get_int("tab-width"), CompareOperator.EQ, 4);
+}
+
+private static void test_commit_message_defaults()
+{
+	// The vendored commit details grid constructs this schema by id rather
+	// than looking it up first, so a missing schema takes the process down
+	// the moment a diff opens.
+	var s = settings_for("preferences.commit.message");
+
+	assert_cmpstr(s.get_string("datetime-selection"), CompareOperator.EQ, "predefined");
+	assert_cmpstr(s.get_string("predefined-datetime"), CompareOperator.EQ, "%Y-%m-%dT%R%z");
+	assert_cmpstr(s.get_string("custom-datetime"), CompareOperator.EQ, "");
+}
+
+private static void test_diff_state_defaults()
+{
+	var s = settings_for("state.diff");
+
+	// A diff opens in the split renderer (spec FR-176).
+	assert_cmpstr(s.get_string("renderer"), CompareOperator.EQ, "split");
+}
+
+private static void test_preferences_lists_its_children()
+{
+	// The dialog and the diff window reach these through the parent schema,
+	// so a child left unlisted is a key nothing can read.
+	var source = SettingsSchemaSource.get_default();
+	var schema = source.lookup("%s.preferences".printf(Gitrlz.Config.APPLICATION_ID),
+	                           true);
+
+	assert_nonnull(schema);
+
+	var children = schema.list_children();
+
+	assert_true("diff" in children);
+	assert_true("interface" in children);
+	assert_true("reflog" in children);
 }
 
 private static void test_reflog_defaults()
@@ -124,9 +180,13 @@ public static int main(string[] args)
 	Test.init(ref args);
 
 	Test.add_func("/gitrlz/settings/interface-defaults", test_interface_defaults);
+	Test.add_func("/gitrlz/settings/diff-defaults", test_diff_defaults);
+	Test.add_func("/gitrlz/settings/commit-message-defaults", test_commit_message_defaults);
 	Test.add_func("/gitrlz/settings/reflog-defaults", test_reflog_defaults);
 	Test.add_func("/gitrlz/settings/window-state-defaults", test_window_state_defaults);
+	Test.add_func("/gitrlz/settings/diff-state-defaults", test_diff_state_defaults);
 	Test.add_func("/gitrlz/settings/reflog-state-defaults", test_reflog_state_defaults);
+	Test.add_func("/gitrlz/settings/preferences-lists-its-children", test_preferences_lists_its_children);
 	Test.add_func("/gitrlz/settings/values-round-trip", test_values_round_trip);
 	Test.add_func("/gitrlz/settings/orientation-is-an-enum", test_orientation_is_an_enum);
 

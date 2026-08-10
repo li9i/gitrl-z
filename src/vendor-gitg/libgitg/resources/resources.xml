@@ -8,14 +8,27 @@
   paths are internal to our binary and never collide with the installed
   gitg (spec NFR-5 — stay byte-close to upstream).
 
-  Dropped relative to upstream: the diff-view resources, the authentication
-  dialog and the sidebar, all out of scope (spec 1.3). gitg-sidebar.ui goes
-  because nothing outside gitg-sidebar.vala itself uses Gitg.Sidebar, and
-  gitrl-z's refs panel derives from GitgHistoryRefsList (a Gtk.ListBox)
-  instead.
+  The diff-view resources are here because the diff window shows gitg's own
+  pane (spec FR-172). Every one of them is the template of a vendored widget,
+  so a file missing from this list is a runtime failure at the moment a diff
+  opens, not a build error.
+
+  Dropped relative to upstream: the authentication dialog and the sidebar,
+  both out of scope (spec 1.3). gitg-sidebar.ui goes because nothing outside
+  gitg-sidebar.vala itself uses Gitg.Sidebar, and gitrl-z's refs panel
+  derives from GitgHistoryRefsList (a Gtk.ListBox) instead.
 -->
 <gresources>
   <gresource prefix="/org/gnome/gitg">
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-commit-details.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-file-renderer-binary.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-file-renderer-image.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-file-renderer-text-split.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-file-renderer-text.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-file.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-options-spacing.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view-options.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/gitg-diff-view.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/gitg-repository-list-box-row.ui</file>
 
     <file compressed="true">ui/libgitg-style.css</file>

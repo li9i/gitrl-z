@@ -127,6 +127,38 @@ public class WordDiff : Object
 		return old_spans.length > 0 || new_spans.length > 0;
 	}
 
+	/**
+	 * refine(), with the spans flattened into pairs of offsets.
+	 *
+	 * The diff renderer that draws the marks is vendored gitg code, which cannot
+	 * name a type of this namespace, so it asks for start and end in one array:
+	 * `{ start, end, start, end, ... }`. Byte offsets, as refine() gives them.
+	 *
+	 * This is the form `Gitg.DiffViewFileRendererText.word_marks` takes, and the
+	 * application installs it there at startup.
+	 */
+	public static bool refine_flat(string old_text,
+	                               string new_text,
+	                               out int[] old_spans,
+	                               out int[] new_spans)
+	{
+		WordSpan[] old_found;
+		WordSpan[] new_found;
+
+		if (!refine(old_text, new_text, out old_found, out new_found))
+		{
+			old_spans = {};
+			new_spans = {};
+
+			return false;
+		}
+
+		old_spans = flattened(old_found);
+		new_spans = flattened(new_found);
+
+		return true;
+	}
+
 	/** The number of tokens that carry text and are common to both lines. */
 	private static int common_count(Token[] tokens, bool[] common)
 	{
@@ -141,6 +173,20 @@ public class WordDiff : Object
 		}
 
 		return count;
+	}
+
+	/** Spans as start and end in one array, the form refine_flat() reports. */
+	private static int[] flattened(WordSpan[] spans)
+	{
+		var flat = new int[spans.length * 2];
+
+		for (var i = 0; i < spans.length; i++)
+		{
+			flat[i * 2] = spans[i].start;
+			flat[i * 2 + 1] = spans[i].end;
+		}
+
+		return flat;
 	}
 
 	private static TokenKind kind_of(unichar c)
