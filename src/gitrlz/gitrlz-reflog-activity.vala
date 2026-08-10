@@ -157,6 +157,9 @@ public class ReflogPaned : Gtk.Paned
 	/** A pending idle to select the row a keyboard move settled on, or 0. */
 	private uint d_cursor_select_id = 0;
 
+	/** The diff window that a row opened, or null if none is open. */
+	private DiffWindow? d_diff_window;
+
 	/** The command that the banner shows now, for the copy button. */
 	private string d_command = "";
 
@@ -264,6 +267,12 @@ public class ReflogPaned : Gtk.Paned
 		d_reflog_list.button_press_event.connect(on_button_press);
 		d_reflog_list.key_press_event.connect(on_key_press);
 
+		// A right click in either pane offers the diff of that commit and its
+		// hash. A plain click in the graph does nothing but select, because a
+		// diff that opened itself while the user walked the graph would be in
+		// the way rather than of use.
+		d_commit_list_view.button_press_event.connect(on_graph_button_press);
+
 		// The plan is the selection here, and the row tint shows it (FR-151).
 		// The selection of the tree view would draw a second, blue highlight
 		// on that tint, and the two states would be unclear. Thus the code
@@ -338,6 +347,14 @@ public class ReflogPaned : Gtk.Paned
 		set
 		{
 			d_repository = value;
+
+			// A diff belongs to the repository it came from. Thus a change of
+			// repository closes the window rather than leaving a diff of a
+			// commit that the new repository has never heard of.
+			if (d_diff_window != null)
+			{
+				d_diff_window.destroy();
+			}
 
 			// Where the user was standing when the window opened this
 			// repository (refer to d_opened_at). This is before reload(), thus
@@ -503,24 +520,75 @@ public class ReflogPaned : Gtk.Paned
 			return;
 		}
 
-		var clipboard = Gtk.Clipboard.get_default(get_display());
-
-		if (clipboard != null)
-		{
-			clipboard.set_text(d_command, -1);
-
-			// X11 holds a selection in the process that owns it. Thus the
-			// command would go away with the window, and the paste that the
-			// user does in a terminal after that would give nothing. These two
-			// calls give the text to the clipboard manager of the session,
-			// which keeps it after gitrl-z stops. A session with no clipboard
-			// manager can keep nothing, and there both calls do nothing.
-			clipboard.set_can_store(null);
-			clipboard.store();
-		}
+		copy_to_clipboard(d_command);
 
 		d_copied_command = d_command;
 		refresh_copied();
+	}
+
+	/** Puts `text` on the clipboard of the session. */
+	private void copy_to_clipboard(string text)
+	{
+		var clipboard = Gtk.Clipboard.get_default(get_display());
+
+		if (clipboard == null)
+		{
+			return;
+		}
+
+		clipboard.set_text(text, -1);
+
+		// X11 holds a selection in the process that owns it. Thus the text
+		// would go away with the window, and the paste that the user does in a
+		// terminal after that would give nothing. These two calls give the text
+		// to the clipboard manager of the session, which keeps it after gitrl-z
+		// stops. A session with no clipboard manager can keep nothing, and
+		// there both calls do nothing.
+		clipboard.set_can_store(null);
+		clipboard.store();
+	}
+
+	/**
+	 * Offers the diff of a commit and its hash, at the pointer.
+	 *
+	 * The hash is the full 40 characters and not the abbreviation that the cell
+	 * shows: this is a hash to paste into a command, where an abbreviation can
+	 * turn ambiguous as the repository grows.
+	 *
+	 * A commit whose object is no longer in the database is offered no diff
+	 * (P-FR-24). Its hash is still worth copying, thus the menu comes up with
+	 * that entry alone rather than not at all.
+	 */
+	private void popup_commit_menu(Gtk.Widget parent, Ggit.OId id, Gdk.EventButton event)
+	{
+		var menu = new Gtk.Menu();
+		var commit = commit_at(id);
+
+		if (commit != null)
+		{
+			var diff = new Gtk.MenuItem.with_mnemonic(_("_Show diff"));
+
+			diff.activate.connect(() => {
+				show_diff(commit);
+			});
+
+			menu.append(diff);
+		}
+
+		var copy = new Gtk.MenuItem.with_mnemonic(_("_Copy SHA"));
+
+		copy.activate.connect(() => {
+			copy_to_clipboard(id.to_string());
+		});
+
+		menu.append(copy);
+
+		// The menu belongs to the widget, thus it stays for as long as it is
+		// shown. A menu held in a local alone would go away at the end of this
+		// call.
+		menu.attach_to_widget(parent, null);
+		menu.show_all();
+		menu.popup_at_pointer(event);
 	}
 
 	/** The page that the preview shows: "graph" or "placeholder". */
@@ -1232,7 +1300,8 @@ public class ReflogPaned : Gtk.Paned
 	private bool on_button_press(Gdk.EventButton event)
 	{
 		if (event.type != Gdk.EventType.BUTTON_PRESS
-		    || event.button != Gdk.BUTTON_PRIMARY)
+		    || (event.button != Gdk.BUTTON_PRIMARY
+		        && event.button != Gdk.BUTTON_SECONDARY))
 		{
 			return false;
 		}
@@ -1250,11 +1319,124 @@ public class ReflogPaned : Gtk.Paned
 			return false;
 		}
 
+		if (event.button == Gdk.BUTTON_SECONDARY)
+		{
+			var entry = d_list.entry_at(path);
+
+			if (entry == null || entry.new_id == null)
+			{
+				return false;
+			}
+
+			popup_commit_menu(d_reflog_list, entry.new_id, event);
+
+			// Consume it, so the right click does not also change the plan.
+			return true;
+		}
+
 		var ctrl = (event.state & Gdk.ModifierType.CONTROL_MASK) != 0;
 		plan_path(path, click_fold(ctrl));
 
 		// The row still takes the keyboard cursor.
 		return false;
+	}
+
+	/**
+	 * A right click in the graph offers the diff of that commit and its hash.
+	 *
+	 * A plain click is left to the tree view, which selects the row. It does
+	 * not change the reset plan: that belongs to the reflog list above.
+	 */
+	private bool on_graph_button_press(Gdk.EventButton event)
+	{
+		if (event.type != Gdk.EventType.BUTTON_PRESS
+		    || event.button != Gdk.BUTTON_SECONDARY)
+		{
+			return false;
+		}
+
+		Gtk.TreePath? path;
+
+		if (!d_commit_list_view.get_path_at_pos((int)event.x, (int)event.y,
+		                                        out path, null, null, null))
+		{
+			return false;
+		}
+
+		var commit = graph_commit_at(path);
+
+		if (commit == null)
+		{
+			return false;
+		}
+
+		popup_commit_menu(d_commit_list_view, commit.get_id(), event);
+
+		return true;
+	}
+
+	/** The commit at an id, or null if its object is no longer present. */
+	private Ggit.Commit? commit_at(Ggit.OId id)
+	{
+		if (d_repository == null)
+		{
+			return null;
+		}
+
+		try
+		{
+			return d_repository.lookup_commit(id);
+		}
+		catch (Error e)
+		{
+			return null;
+		}
+	}
+
+	/** The commit at a path of the graph, or null if there is none. */
+	private Gitg.Commit? graph_commit_at(Gtk.TreePath path)
+	{
+		if (d_commit_model == null)
+		{
+			return null;
+		}
+
+		Gtk.TreeIter iter;
+
+		if (!d_commit_model.get_iter(out iter, path))
+		{
+			return null;
+		}
+
+		Value value;
+		d_commit_model.get_value(iter, Gitg.CommitModelColumns.COMMIT, out value);
+
+		return value.get_object() as Gitg.Commit;
+	}
+
+	/**
+	 * Shows the diff of a commit, in the diff window.
+	 *
+	 * One window serves every commit: a second request moves the window that is
+	 * already open rather than opening another, and raises it.
+	 */
+	private void show_diff(Ggit.Commit commit)
+	{
+		if (d_repository == null)
+		{
+			return;
+		}
+
+		if (d_diff_window == null)
+		{
+			d_diff_window = new DiffWindow(get_toplevel() as Gtk.Window);
+			d_diff_window.destroy.connect(() => {
+				d_diff_window = null;
+			});
+		}
+
+		d_diff_window.show_commit(d_repository, commit);
+		d_diff_window.present();
 	}
 
 	private bool on_key_press(Gdk.EventKey event)

@@ -38,6 +38,7 @@ unit_tests = [
   'settings',
   'annotations',
   'branch-colours',
+  'commit-diff',
   'reflog',
   'reflog-filter',
   'repository-state',
@@ -45,6 +46,7 @@ unit_tests = [
   'reset-preview',
   'session-start',
   'synthetic-ref',
+  'word-diff',
 ]
 
 # The CLI tests spawn the real binary, and the settings tests need the

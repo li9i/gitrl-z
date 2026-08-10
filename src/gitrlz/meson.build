@@ -12,6 +12,9 @@ gitrlz_lib_sources = files(
   'gitrlz-cell-renderer-branch.vala',
   'gitrlz-cell-renderer-message.vala',
   'gitrlz-cell-renderer-operations.vala',
+  'gitrlz-commit-diff.vala',
+  'gitrlz-diff-view.vala',
+  'gitrlz-diff-window.vala',
   'gitrlz-monitor.vala',
   'gitrlz-preferences-dialog.vala',
   'gitrlz-reflog-activity.vala',
@@ -25,6 +28,7 @@ gitrlz_lib_sources = files(
   'gitrlz-session-start.vala',
   'gitrlz-synthetic-ref.vala',
   'gitrlz-window.vala',
+  'gitrlz-word-diff.vala',
 )
 
 gitrlz_resources = gnome.compile_resources(

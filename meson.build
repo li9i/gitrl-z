@@ -58,7 +58,7 @@ glib_req_version = '>= 2.68'
 gee_dep = dependency('gee-0.8')
 gio_dep = dependency('gio-2.0', version: glib_req_version)
 glib_dep = dependency('glib-2.0', version: glib_req_version)
-gtk_dep = dependency('gtk+-3.0', version: '>= 3.20.0')
+gtk_dep = dependency('gtk+-3.0', version: '>= 3.22.0')
 gdk_dep = dependency('gdk-3.0')
 hdy_dep = dependency('libhandy-1', version: '>= 1.5.0')
 libgit2_glib_dep = dependency('libgit2-glib-1.0', version: '>= 1.1.0')
