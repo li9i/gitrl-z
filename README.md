@@ -6,7 +6,7 @@ The reflog records every position of every branch: commits a rebase rewrote, com
 
 It lists the reflog the way `gitg` shows history. Click an entry and the commit graph redraws with that branch moved to where a reset would put it, so you see where the branch goes and what it leaves behind in the same picture. `gitrl-z` gives you the command; running it stays your decision. **It writes nothing to the repository.**
 
-Pronounced git-ROL-ZED (/ɡɪtˈrəʊlzɛd/), after ctrl-z said aloud: control zed.
+Pronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
 
 ![Reflog entries clicked one after another, with the commit graph redrawn under each one](docs/screenshots/demo-one-branch.gif)
 
