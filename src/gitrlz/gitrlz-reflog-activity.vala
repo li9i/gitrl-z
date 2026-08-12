@@ -931,8 +931,13 @@ public class ReflogPaned : Gtk.Paned
 
 	private bool on_graph_button_press(Gdk.EventButton event)
 	{
-		if (event.type != Gdk.EventType.BUTTON_PRESS
-		    || event.button != Gdk.BUTTON_SECONDARY)
+		var menu = event.type == Gdk.EventType.BUTTON_PRESS
+		           && event.button == Gdk.BUTTON_SECONDARY;
+
+		var activate = event.type == Gdk.EventType.@2BUTTON_PRESS
+		               && event.button == Gdk.BUTTON_PRIMARY;
+
+		if (!menu && !activate)
 		{
 			return false;
 		}
@@ -952,7 +957,14 @@ public class ReflogPaned : Gtk.Paned
 			return false;
 		}
 
-		popup_commit_menu(d_commit_list_view, commit.get_id(), event);
+		if (activate)
+		{
+			show_diff(commit);
+		}
+		else
+		{
+			popup_commit_menu(d_commit_list_view, commit.get_id(), event);
+		}
 
 		return true;
 	}
