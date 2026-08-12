@@ -121,3 +121,7 @@ Run outside a repository, `gitrlz` opens a chooser listing recently used ones.
 ## Licence
 
 GPL-2.0-or-later, from gitg. Refer to `COPYING`. `debian/copyright` gives the per-file data that credits the gitg authors.
+
+## Disclaimer
+
+`gitrl-z` was created by li9i and coded by Claude. What a time to be alive.
