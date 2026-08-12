@@ -17,15 +17,6 @@
  * with gitrl-z. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * Window and shell wiring (spec FR-100, FR-112, FR-113).
- *
- * These assert on widget and model state, not pixels — that is the visual
- * suite's job. What they catch is the wiring that units cannot see: that the
- * template loads at all, that opening a repository actually reaches the
- * header bar, and that the dash is what a window without a repository shows.
- */
-
 namespace GitrlzTest
 {
 
@@ -38,9 +29,6 @@ private static Gitrlz.Window new_window()
 
 private static void test_template_loads()
 {
-	// A [GtkTemplate] failure is a runtime error, not a compile one, and it
-	// takes down every other UI test with an unhelpful message. Asserting it
-	// first makes the cause obvious.
 	var window = new_window();
 	assert_nonnull(window);
 	window.destroy();
@@ -48,8 +36,6 @@ private static void test_template_loads()
 
 private static void test_window_without_repository_shows_dash()
 {
-	// FR-100: no repository means the chooser, not an error and not an
-	// empty activity area.
 	var window = new_window();
 
 	assert_null(window.repository);
@@ -59,8 +45,6 @@ private static void test_window_without_repository_shows_dash()
 
 private static void test_open_repository_sets_title()
 {
-	// FR-112, FR-113: opening a repository puts its name in the header bar
-	// title and its path in the subtitle.
 	try
 	{
 		var repo = Repo.create();
@@ -89,10 +73,6 @@ private static void test_open_repository_sets_title()
 
 private static void test_open_bare_repository()
 {
-	// Spec section 5: a bare repository opens. It has refs and reflogs, so
-	// there is something to show; only the working tree is missing. This is
-	// a deliberate change from the Python implementation, whose discovery
-	// via `rev-parse --show-toplevel` excluded bare repositories.
 	try
 	{
 		var dir = DirUtils.make_tmp("gitrlz-bare-XXXXXX");
@@ -127,9 +107,6 @@ private static void test_open_bare_repository()
 
 private static void test_preferences_dialog_constructs()
 {
-	// FR-115. Every control binds to a schema key, and a binding to a key
-	// that does not exist aborts the process rather than failing softly, so
-	// merely constructing the dialog exercises the whole set.
 	var window = new_window();
 	var dialog = new Gitrlz.PreferencesDialog(window);
 
@@ -147,8 +124,6 @@ public static int main(string[] args)
 
 	if (!Gtk.init_check(ref args))
 	{
-		// No display: report as skipped rather than failed. The suite is run
-		// under tests/ui/run-xvfb.sh, which provides one.
 		stdout.printf("1..0 # SKIP no display available\n");
 		return 0;
 	}
@@ -186,5 +161,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

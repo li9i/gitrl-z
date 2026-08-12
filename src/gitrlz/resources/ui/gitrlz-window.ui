@@ -1,13 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Modelled on gitg 44's gitg-window.ui (spec FR-113).
-
-  Removed relative to gitg: the clone button and the "add repository" button,
-  both of which start write operations, and the selection-mode button and its
-  cancel counterpart, which exist for gitg's bulk commit actions. What
-  remains is the layout gitg has: dash button on the left, activity switcher
-  centred, search and gear on the right.
--->
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <template class="GitrlzWindow" parent="GtkApplicationWindow">
@@ -40,12 +31,6 @@
           </packing>
         </child>
 
-        <!--
-          Packed as an ordinary child rather than as the header bar's title
-          widget, which is what gitg does too. A custom title widget replaces
-          the title and subtitle entirely, and those carry the repository name
-          and path (FR-113).
-        -->
         <child>
           <object class="GtkStackSwitcher" id="d_activities_switcher">
             <property name="visible">False</property>

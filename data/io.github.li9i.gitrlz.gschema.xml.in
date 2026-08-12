@@ -1,22 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  gitrl-z settings (spec FR-116).
-
-  Modelled on gitg's schema, reduced to keys gitrl-z actually reads. Spec
-  FR-115 is explicit that no control exists for a setting nothing honours;
-  the same rule applies here, so gitg's commit and clone keys are absent
-  rather than carried along unused.
-
-  The diff, gravatar and highlighting keys were absent for the same cause
-  until the diff pane arrived (spec FR-172). The pane reads every one of
-  them, so each is here, with gitg's own name, type and default (NFR-51).
-  gitg's `patience` key stays out: nothing in the pane reads it.
-
-  Two schemas here exist only because vendored gitg code constructs them by
-  id. `preferences.commit.message` holds the three date-format keys the
-  commit details grid reads; its name is gitg's and reads oddly in a tool
-  that writes no commit, which is cheaper than patching the grid.
--->
 <schemalist>
   <enum id="@APPLICATION_ID@.Layout">
     <value nick="horizontal" value="0"/>

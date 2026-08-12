@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  gitrl-z's own resources, under its own prefix.
-
-  The vendored gitg subtree keeps /org/gnome/gitg for its templates
-  (see src/vendor-gitg/libgitg/resources/resources.xml); this is the
-  gitrl-z half.
--->
 <gresources>
   <gresource prefix="/io/github/li9i/gitrlz">
     <file compressed="true" preprocess="xml-stripblanks">ui/gitrlz-window.ui</file>

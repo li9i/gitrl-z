@@ -14,11 +14,6 @@
  * details.
  */
 
-/*
- * The plan's command, tip set and target resolution (spec FR-148 to FR-150,
- * IC 4.2). Pure: stand-in OIds, no repository.
- */
-
 namespace GitrlzTest
 {
 
@@ -43,7 +38,6 @@ private static Gee.Map<string, Ggit.OId> tips(string[] pairs) throws Error
 	return map;
 }
 
-/** The set of currently existing branches command_for is told about. */
 private static Gee.Collection<string> existing(string[] names)
 {
 	var set = new Gee.HashSet<string>();
@@ -119,7 +113,6 @@ private static void test_command_branch_f_lines_are_ordered()
 		plan.toggle("feature", oid(B));
 		plan.toggle("bugfix", oid(C));
 
-		// Detached HEAD: every move is branch -f, in branch-name order.
 		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, null, existing({"main", "feature", "bugfix"})),
 		              CompareOperator.EQ,
 		              "git branch -f bugfix ccccccc; " +
@@ -138,16 +131,12 @@ private static void test_command_empty_plan_is_empty_string()
 
 private static void test_command_absent_branch_is_recreated()
 {
-	// IC-165, FR-166: a plan target that no longer exists is a recreate, so it
-	// gets plain `git branch` (no -f); a present non-current branch keeps
-	// `git branch -f`; the checked-out branch keeps `git reset --hard`. The
-	// branch lines stay in branch-name order, the reset last.
 	try
 	{
 		var plan = new Gitrlz.ResetPlan();
-		plan.toggle("main", oid(A));      // checked-out: reset --hard
-		plan.toggle("feature", oid(B));   // present, not current: branch -f
-		plan.toggle("ghost", oid(C));     // deleted: recreate with branch
+		plan.toggle("main", oid(A));
+		plan.toggle("feature", oid(B));
+		plan.toggle("ghost", oid(C));
 
 		assert_cmpstr(
 			Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "feature"})),
@@ -170,8 +159,6 @@ private static void test_tips_keep_the_tree_and_add_targets()
 
 		var result = Gitrlz.ResetPreview.preview_tips(t, plan);
 
-		// The whole tree stays: both real tips are kept, and the target C is
-		// added so a reset could land there without a ref reaching it.
 		assert_cmpint(result.length, CompareOperator.EQ, 3);
 		assert_true(contains_oid(result, oid(A)));
 		assert_true(contains_oid(result, oid(B)));
@@ -191,12 +178,10 @@ private static void test_tips_dedupe_a_target_that_is_already_a_tip()
 
 		var result = Gitrlz.ResetPreview.preview_tips(t, plan);
 
-		// The real tip A stays and the target B is added: two distinct commits.
 		assert_cmpint(result.length, CompareOperator.EQ, 2);
 		assert_true(contains_oid(result, oid(A)));
 		assert_true(contains_oid(result, oid(B)));
 
-		// A target that is already a tip is not fed to the walker twice.
 		var same = new Gitrlz.ResetPlan();
 		same.toggle("main", oid(A));
 		var deduped = Gitrlz.ResetPreview.preview_tips(t, same);
@@ -213,17 +198,12 @@ private static void test_tips_keep_the_commit_the_session_started_on()
 		var t = tips({"main", A});
 		var plan = new Gitrlz.ResetPlan();
 
-		// A reset in a terminal moved main from B down to A, so nothing reaches
-		// B any more. The graph must still draw it: it is the position the
-		// window opened on.
 		var result = Gitrlz.ResetPreview.preview_tips(t, plan, oid(B));
 
 		assert_cmpint(result.length, CompareOperator.EQ, 2);
 		assert_true(contains_oid(result, oid(A)));
 		assert_true(contains_oid(result, oid(B)));
 
-		// An untouched session started on the tip it is still on, so the set is
-		// the real tips and the graph is unchanged.
 		var untouched = Gitrlz.ResetPreview.preview_tips(t, plan, oid(A));
 		assert_cmpint(untouched.length, CompareOperator.EQ, 1);
 		assert_true(contains_oid(untouched, oid(A)));
@@ -265,9 +245,6 @@ private static void test_target_branchless_row_is_not_togglable()
 
 private static void test_target_absent_branch_is_recoverable()
 {
-	// IC-166: a row naming a real branch no longer among the tips is a valid
-	// recovery target now, in either view, so the plan can recreate it. A null
-	// attribution (a detached position) is still not togglable.
 	try
 	{
 		var t = tips({"feature", A});
@@ -304,5 +281,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  The gear menu (spec FR-114).
-
-  gitg's equivalent additionally offers Clone, Author Details and the
-  repository-mutating actions. None of those exist here: gitrl-z is read only.
--->
 <interface>
   <menu id="gear-menu">
     <section>

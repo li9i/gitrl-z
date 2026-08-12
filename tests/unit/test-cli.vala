@@ -17,17 +17,6 @@
  * with gitrl-z. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * Command-line contract (spec section 4.1, FR-104).
- *
- * These spawn the real binary with DISPLAY unset, because the requirement is
- * not merely that the exit codes are right but that these paths work on a
- * machine with no display at all. That is easy to lose in a GTK application
- * and hard to notice: everything still behaves correctly on a developer's
- * desktop. It is the direct descendant of the Python implementation's
- * headless-import test.
- */
-
 namespace GitrlzTest
 {
 
@@ -53,8 +42,6 @@ private static Result run_gitrlz(string[] args)
 
 	argv += null;
 
-	// DISPLAY removed rather than blanked: this must hold where no display
-	// exists, not merely where one is misconfigured.
 	var env = Environ.get();
 	env = Environ.unset_variable(env, "DISPLAY");
 	env = Environ.unset_variable(env, "WAYLAND_DISPLAY");
@@ -101,7 +88,6 @@ private static void test_help()
 
 private static void test_usage_error()
 {
-	// Spec section 4.1: a usage error is 2, distinct from a startup error.
 	var r = run_gitrlz({"--this-is-not-an-option"});
 
 	assert_cmpint(r.status, CompareOperator.EQ, 2);
@@ -109,9 +95,6 @@ private static void test_usage_error()
 
 private static void test_path_not_a_repository()
 {
-	// FR-104: the message goes to stderr, the exit code is 1, and no window
-	// appears. A directory that certainly exists and certainly is not a
-	// repository.
 	try
 	{
 		var dir = DirUtils.make_tmp("gitrlz-notrepo-XXXXXX");
@@ -133,13 +116,6 @@ private static void test_path_not_a_repository()
 
 private static void test_path_in_a_repository_is_accepted()
 {
-	// The complement of the test above, and the one that catches the real
-	// bug: if discovery is broken, every path looks like "not a repository"
-	// and the test above passes for the wrong reason.
-	//
-	// With no display the run still cannot finish, but it must fail on the
-	// display rather than on the repository, so what is asserted is the
-	// absence of the discovery error.
 	try
 	{
 		var repo = Repo.create();
@@ -149,15 +125,12 @@ private static void test_path_in_a_repository_is_accepted()
 
 		assert_false(r.stderr_text.contains("not a git repository"));
 
-		// A path nested inside the repository resolves to the same one
-		// (spec FR-2).
 		var nested = repo.path.get_child("nested");
 		nested.make_directory();
 
 		var r2 = run_gitrlz({nested.get_path()});
 		assert_false(r2.stderr_text.contains("not a git repository"));
 
-		// So does a file inside it.
 		var r3 = run_gitrlz({repo.path.get_child("file.txt").get_path()});
 		assert_false(r3.stderr_text.contains("not a git repository"));
 
@@ -183,5 +156,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

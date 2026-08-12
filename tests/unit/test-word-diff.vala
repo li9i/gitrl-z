@@ -14,18 +14,9 @@
  * details.
  */
 
-/*
- * The word marks inside a changed line.
- *
- * Pure logic: two strings in, byte ranges out. The tests read the marked text
- * back out of the line rather than asserting on offsets, because the offsets
- * are a means and the marked words are the behaviour.
- */
-
 namespace GitrlzTest
 {
 
-/** The text that each span covers, joined by `|` so one assert can read it. */
 private static string marked(string line, Gitrlz.WordSpan[] spans)
 {
 	var parts = new string[spans.length];
@@ -79,7 +70,6 @@ private static void test_a_mark_does_not_end_on_whitespace()
 	assert_true(Gitrlz.WordDiff.refine(old_line, new_line,
 	                                   out old_spans, out new_spans));
 
-	// One mark over the changed phrase, and not one for each word of it.
 	assert_cmpstr(marked(new_line, new_spans), CompareOperator.EQ, "one two");
 	assert_cmpstr(marked(old_line, old_spans), CompareOperator.EQ, "beta");
 }
@@ -104,8 +94,6 @@ private static void test_two_unrelated_lines_take_no_marks()
 	Gitrlz.WordSpan[] old_spans;
 	Gitrlz.WordSpan[] new_spans;
 
-	// A rewrite, not an edit. Marks over the whole line would say no more
-	// than the line tint already says.
 	assert_false(Gitrlz.WordDiff.refine("import os", "def main(argv):",
 	                                    out old_spans, out new_spans));
 
@@ -118,8 +106,6 @@ private static void test_marks_land_on_the_right_bytes_past_a_wide_character()
 	Gitrlz.WordSpan[] old_spans;
 	Gitrlz.WordSpan[] new_spans;
 
-	// The offsets are byte offsets, thus a character outside ASCII before the
-	// change must not move the mark.
 	var old_line = "καλημέρα alpha beta";
 	var new_line = "καλημέρα alpha gamma";
 
@@ -132,9 +118,6 @@ private static void test_marks_land_on_the_right_bytes_past_a_wide_character()
 
 private static void test_the_flat_form_carries_the_same_offsets()
 {
-	// The diff renderer is vendored gitg code and cannot name Gitrlz.WordSpan,
-	// so it asks for the spans as a flat array of start and end offsets. The two
-	// forms have to agree, or the marks land on the wrong bytes.
 	Gitrlz.WordSpan[] old_spans;
 	Gitrlz.WordSpan[] new_spans;
 	int[] old_flat;
@@ -166,8 +149,6 @@ private static void test_the_flat_form_carries_the_same_offsets()
 
 private static void test_the_flat_form_declines_where_refine_declines()
 {
-	// A pair with nothing in common takes no marks in either form, and the
-	// renderer then leaves the line with its tint.
 	int[] old_flat;
 	int[] new_flat;
 
@@ -215,5 +196,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

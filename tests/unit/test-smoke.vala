@@ -17,24 +17,11 @@
  * with gitrl-z. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * Harness smoke tests.
- *
- * These prove the test infrastructure itself works before any behaviour
- * depends on it: that GLib.Test runs under meson, that the vendored gitg
- * library links into a test binary, and that the fixture factory produces
- * deterministic repositories.
- */
-
 namespace GitrlzTest
 {
 
 private static void test_vendored_library_links()
 {
-	// Gitg.init() registering the Ggit -> Gitg type factory is the thing
-	// every repository test depends on. If the vendored library did not
-	// link, this would not compile; if it linked but was broken, this
-	// would throw.
 	try
 	{
 		Gitg.init();
@@ -47,10 +34,6 @@ private static void test_vendored_library_links()
 
 private static void test_fixture_is_deterministic()
 {
-	// The visual regression suite (spec 6.3) needs byte-identical fixture
-	// repositories across runs, and this is what guarantees it. Two
-	// repositories built from the same commands must produce the same
-	// commit hash.
 	try
 	{
 		var a = Repo.create();
@@ -72,9 +55,6 @@ private static void test_fixture_is_deterministic()
 
 private static void test_fixture_builds_history()
 {
-	// Exercises the factory's whole surface, so a later test that uses
-	// branches, merges or stashes fails for its own reasons rather than
-	// because the helper is broken.
 	try
 	{
 		var repo = Repo.create();
@@ -82,9 +62,6 @@ private static void test_fixture_builds_history()
 		repo.commit("first");
 		repo.branch("feature");
 		repo.checkout("feature");
-		// Distinct files per branch, so the merge is clean. Both branches
-		// writing commit()'s default file.txt would conflict, and a
-		// conflicted merge is a different fixture than the one wanted here.
 		repo.commit("on feature", "feature.txt");
 		repo.checkout("main");
 		repo.commit("on main", "main.txt");
@@ -94,7 +71,6 @@ private static void test_fixture_builds_history()
 		assert_true("feature" in branches);
 		assert_true("main" in branches);
 
-		// A stash needs a dirty tree first.
 		FileUtils.set_contents(repo.path.get_child("file.txt").get_path(), "dirty\n");
 		repo.stash("wip");
 
@@ -121,5 +97,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

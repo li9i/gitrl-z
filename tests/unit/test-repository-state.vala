@@ -14,14 +14,6 @@
  * details.
  */
 
-/*
- * The repository's mid-operation state (spec FR-165, IC-164).
- *
- * A pure read over the git directory: each marker libgit2's
- * git_repository_state inspects maps to its operation token, and a clean
- * repository reports none.
- */
-
 namespace GitrlzTest
 {
 
@@ -34,7 +26,6 @@ private static Gitg.Repository open_fixture(Repo repo) throws Error
 
 private static void test_clean_repository_has_no_operation()
 {
-	// None of the markers present: no operation in progress.
 	try
 	{
 		var repo = Repo.create();
@@ -52,7 +43,6 @@ private static void test_clean_repository_has_no_operation()
 
 private static void test_each_marker_maps_to_its_token()
 {
-	// IC-164, checked marker by marker: the table the detection mirrors.
 	string[] markers = {
 		"rebase", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "BISECT_LOG"
 	};
@@ -92,5 +82,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

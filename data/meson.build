@@ -1,17 +1,3 @@
-# Desktop integration: GSettings schema, .desktop entry, AppStream metadata,
-# icons and the man page (spec FR-116, FR-118).
-
-# Icons.
-#
-# Installed under the application id so the .desktop entry's Icon= key
-# resolves. The symbolic variant is what a dark panel or a notification uses.
-#
-# The application icon is authored as icons/io.github.li9i.gitrlz.svg. It goes
-# into the sized hicolor directories rather than scalable/ because a panel that
-# picks the nearest size and scales it gives a softer icon than one drawn at
-# the size it needs. Each PNG is rendered from the SVG and committed, so the
-# build needs no image tooling. Regenerate them if the artwork changes:
-# scripts/regen-icons.sh.
 foreach size : ['128', '64', '48']
   install_data(
     'icons/io.github.li9i.gitrlz-@0@.png'.format(size),
@@ -28,7 +14,6 @@ install_data(
   rename: '@0@-symbolic.svg'.format(application_id),
 )
 
-# Desktop entry.
 desktop_config = configuration_data()
 desktop_config.set('icon', application_id)
 desktop_config.set('binary', gitrlz_binary)
@@ -48,8 +33,6 @@ desktop_file = i18n.merge_file(
   install_dir: join_paths(gitrlz_datadir, 'applications'),
 )
 
-# Validating at build time means a malformed entry fails here rather than
-# being noticed by lintian, or by a user whose menu has no gitrl-z in it.
 desktop_file_validate = find_program('desktop-file-validate', required: false)
 if desktop_file_validate.found()
   test(
@@ -60,7 +43,6 @@ if desktop_file_validate.found()
   )
 endif
 
-# GSettings schema.
 schema_conf = configuration_data()
 schema_conf.set('GETTEXT_PACKAGE', gitrlz_gettext)
 schema_conf.set('APPLICATION_ID', application_id)
@@ -79,13 +61,6 @@ schema_file = configure_file(
   install_dir: join_paths(gitrlz_datadir, 'glib-2.0', 'schemas'),
 )
 
-# Compile the schemas into the build tree as well, so an uninstalled run works
-# with GSETTINGS_SCHEMA_DIR pointed here (see scripts/dev.sh run). Without
-# this, GLib aborts at startup on a missing schema (spec section 5).
-#
-# gnome.compile_schemas() is not usable here: it compiles schemas found in the
-# current *source* directory, and ours is generated into the build directory
-# by configure_file above. Hence the explicit target.
 glib_compile_schemas = find_program('glib-compile-schemas')
 
 gschemas_compiled = custom_target(
@@ -96,8 +71,6 @@ gschemas_compiled = custom_target(
   build_by_default: true,
 )
 
-# --strict turns a malformed schema into a build failure rather than something
-# discovered when a user's settings silently fail to load.
 test(
   'gschema-validate',
   glib_compile_schemas,
@@ -106,7 +79,6 @@ test(
   depends: gschemas_compiled,
 )
 
-# AppStream metadata.
 metainfo_conf = configuration_data()
 metainfo_conf.set('APPLICATION_ID', application_id)
 
@@ -118,10 +90,6 @@ metainfo_file = configure_file(
   install_dir: join_paths(gitrlz_datadir, 'metainfo'),
 )
 
-# Either tool will do; noble ships appstreamcli in the `appstream` package and
-# appstream-util in `appstream-util`. Validation is skipped rather than fatal
-# when neither is present, so the package build does not gain a dependency
-# purely to lint its own metadata.
 appstreamcli = find_program('appstreamcli', required: false)
 appstream_util = find_program('appstream-util', required: false)
 
@@ -143,5 +111,4 @@ else
   message('neither appstreamcli nor appstream-util found; metainfo not validated')
 endif
 
-# Man page.
 install_man('gitrlz.1')

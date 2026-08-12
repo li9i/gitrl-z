@@ -1,12 +1,4 @@
 #!/bin/sh
-# Capture gitrl-z with a reflog entry selected, so the preview graph is drawn.
-#
-# Separate from capture.sh because gitrl-z needs a click before there is a
-# graph to measure: with nothing selected the preview shows the "Select an
-# entry" placeholder (P-FR-23), which is correct behaviour and useless to
-# measure.
-#
-#   tests/visual/capture-gitrlz.sh <output.png> <repo>
 
 set -eu
 
@@ -38,8 +30,6 @@ xvfb-run -a --server-args="-screen 0 1400x900x24 -nolisten tcp" sh -c '
 
 	sleep 6
 
-	# The second row of the reflog list. Any row with a resolvable commit
-	# would do; this one is stable for the fixture.
 	xdotool mousemove 700 110 click 1
 
 	sleep 4

@@ -20,20 +20,6 @@
 namespace Gitrlz
 {
 
-/**
- * Preferences (spec FR-115).
- *
- * Each control here binds to a key in the gitrl-z schema, and gitrl-z reads
- * each key in that schema. The commit and clone pages of gitg have no
- * equivalent, because the settings for them do not exist. The three rows that
- * belong to the diff pane are on the Interface page, where gitg has them, and
- * the rest of what the pane offers is in the options bar at its own foot,
- * where the reader is when they want it.
- *
- * Settings.bind makes the bindings. Thus the dialog has no save step and no
- * apply button. A change becomes effective immediately, and the schema holds
- * the only copy of the data.
- */
 public class PreferencesDialog : Gtk.Dialog
 {
 	private Settings d_interface_settings;
@@ -73,9 +59,6 @@ public class PreferencesDialog : Gtk.Dialog
 		var orientation = new Gtk.ComboBoxText();
 		orientation.append("horizontal", _("Horizontal"));
 		orientation.append("vertical", _("Vertical"));
-		// The key is an enum, and the active-id of ComboBoxText is a string.
-		// Thus the mapping uses the nick. bind_with_mapping is the general
-		// solution. For two values the nicks are already the strings.
 		orientation.active_id = d_interface_settings.get_string("orientation");
 		orientation.changed.connect(() => {
 			if (orientation.active_id != null)
@@ -93,15 +76,10 @@ public class PreferencesDialog : Gtk.Dialog
 		var font_button = new Gtk.FontButton();
 		d_interface_settings.bind("monospace-font-name", font_button, "font",
 		                          SettingsBindFlags.DEFAULT);
-		// A font selection has no effect while the system font is in use.
-		// Thus the control follows the checkbox.
 		d_interface_settings.bind("use-default-font", font_button, "sensitive",
 		                          SettingsBindFlags.GET | SettingsBindFlags.INVERT_BOOLEAN);
 		add_row(grid, ref row, _("_Font:"), font_button);
 
-		// gitg has this row on the same page, in these words. It is off by
-		// default: turned on, reading a diff asks gravatar.com for a picture of
-		// the author.
 		var gravatar = new Gtk.CheckButton.with_mnemonic(
 			_("Use gravatar service to provide user avatars"));
 		d_interface_settings.bind("use-gravatar", gravatar, "active",
@@ -126,14 +104,6 @@ public class PreferencesDialog : Gtk.Dialog
 		return grid;
 	}
 
-	/**
-	 * The drop-down of installed GtkSourceView style schemes.
-	 *
-	 * The value stored is the scheme's id and the label shown is its name, thus
-	 * the binding maps between the two. A scheme that is not installed leaves
-	 * the drop-down with nothing active rather than inventing an entry: the
-	 * renderer keeps whatever scheme it has, and the reader can pick again.
-	 */
 	private Gtk.Widget style_scheme_chooser()
 	{
 		var schemes = new Gtk.ComboBoxText();
@@ -200,5 +170,3 @@ public class PreferencesDialog : Gtk.Dialog
 }
 
 }
-
-// ex:set ts=4 noet:

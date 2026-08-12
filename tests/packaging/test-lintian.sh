@@ -1,15 +1,4 @@
 #!/bin/sh
-# Lintian the built package at --pedantic --info (spec NFR-11).
-#
-# Runs against the .changes rather than the .deb so that source-package tags
-# are checked too: the binary alone misses everything about debian/control,
-# debian/copyright and the source format. That distinction is not academic —
-# the binary check passed cleanly while the source check was still reporting
-# three warnings.
-#
-# One override exists, documented in debian/gitrl-z.lintian-overrides. This
-# script prints overridden tags rather than hiding them, so an override can
-# never quietly grow into a pile of them.
 
 set -eu
 

@@ -13,5 +13,3 @@ namespace Gitg.Config
 	public const string VERSION;
 	public const string PLATFORM_NAME;
 }
-
-// ex:ts=4 noet

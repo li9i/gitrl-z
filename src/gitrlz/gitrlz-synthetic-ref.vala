@@ -17,20 +17,6 @@
 namespace Gitrlz
 {
 
-/**
- * A branch label with no live git reference (FR-166).
- *
- * The preview graph draws the pill of a branch from a Gitg.Ref. Usually that
- * is a wrapper around a real libgit2 reference. A deleted branch has no such
- * reference. To draw its pill at the position where `git branch <name> <sha>`
- * would make it again, gitrl-z needs a label object that holds only a name.
- *
- * Gitg.RefBase is a concrete Gitg.Ref, and the label renderer reads only its
- * parsed name. (Gitg.LabelRenderer takes the short name and the ref type from
- * parsed_name, and nothing else.) This class sets d_parsed_name. Thus a lookup
- * does not use get_name() on an absent native reference, and the object
- * renders as a branch pill with no reference.
- */
 public class SyntheticBranchRef : Gitg.RefBase
 {
 	public SyntheticBranchRef(string shortname)
@@ -40,5 +26,3 @@ public class SyntheticBranchRef : Gitg.RefBase
 }
 
 }
-
-// ex:set ts=4 noet:

@@ -1,20 +1,4 @@
 #!/bin/sh
-# Build a portable AppImage of gitrl-z.
-#
-# Run from the repository root:
-#
-#   ./scripts/build-appimage.sh
-#   -> gitrl-z-<version>-x86_64.AppImage in the repository root
-#
-# The app is installed into an AppDir, then linuxdeploy and its GTK plugin
-# bundle GTK 3, its modules, theme and pixbuf loaders, the compiled GSettings
-# schema, and the app's own libraries (libgit2-glib, libgit2, libgee,
-# libhandy), so the result runs on a machine that has none of them. No root and
-# no online account are needed, to build or to publish (it is one file, meant
-# to be attached to a GitHub release).
-#
-# The AppImage tooling is fetched once into _build/appimage/tools and cached.
-# APPIMAGE_EXTRACT_AND_RUN lets those tools run where FUSE is unavailable.
 
 set -eu
 
@@ -26,18 +10,11 @@ work=_build/appimage
 appdir=$work/AppDir
 tools=$work/tools
 
-# 1. Install into an AppDir under /usr, the layout AppImage tools expect.
 [ -d "$work/build" ] || meson setup "$work/build" --prefix=/usr -Dprofile=default
 ninja -C "$work/build"
 rm -rf "$appdir"
 DESTDIR="$PWD/$appdir" ninja -C "$work/build" install
 
-# 2. Carry GtkSourceView's data beside the library.
-#
-# linuxdeploy bundles the libraries a binary links, and nothing else. The
-# language definitions and the style schemes of GtkSourceView are data, so
-# without this the diff pane highlights nothing on a machine that has no
-# gtksourceview installed, and says nothing about why.
 sourceview_data=/usr/share/gtksourceview-4
 
 if [ -d "$sourceview_data" ]; then
@@ -47,7 +24,6 @@ else
 	echo "warning: $sourceview_data is absent; the AppImage will not highlight" >&2
 fi
 
-# 3. Fetch the tools once (continuous builds, as AppImage upstream ships them).
 mkdir -p "$tools"
 fetch() { [ -f "$tools/$2" ] || curl -fsSL -o "$tools/$2" "$1"; }
 ld=https://github.com/linuxdeploy
@@ -55,10 +31,8 @@ fetch "$ld/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
 fetch "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" linuxdeploy-plugin-gtk.sh
 fetch "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" appimagetool-x86_64.AppImage
 chmod +x "$tools"/*.AppImage "$tools/linuxdeploy-plugin-gtk.sh"
-# linuxdeploy looks for `appimagetool` on PATH; give it one.
 ln -sf appimagetool-x86_64.AppImage "$tools/appimagetool"
 
-# 4. Bundle everything into the AppDir.
 APPIMAGE_EXTRACT_AND_RUN=1 DEPLOY_GTK_VERSION=3 VERSION="$version" \
 PATH="$PWD/$tools:$PATH" \
 	"$tools/linuxdeploy-x86_64.AppImage" \
@@ -68,21 +42,10 @@ PATH="$PWD/$tools:$PATH" \
 		--icon-file "$appdir/usr/share/icons/hicolor/128x128/apps/io.github.li9i.gitrlz.png" \
 		--plugin gtk
 
-# 5. Put the app's own GSettings schema back.
-#
-# The GTK plugin copies the whole of the build machine's GSettings schema
-# directory over the AppDir's and recompiles it. That replaces the schema
-# installed in step 1 with whichever version of gitrl-z the build machine
-# happens to have installed system wide, or with nothing at all on a machine
-# that has never installed it. Either way the app aborts at startup on a key
-# the schema it was built against has and the bundled one does not. Copying
-# the freshly built schema back over the plugin's and recompiling leaves the
-# AppImage carrying the schema its binary expects.
 schemas=$appdir/usr/share/glib-2.0/schemas
 cp "$work/build/data/io.github.li9i.gitrlz.gschema.xml" "$schemas/"
 glib-compile-schemas "$schemas"
 
-# 6. Emit the AppImage into the repository root.
 rm -f "$root"/gitrl-z-*-x86_64.AppImage
 APPIMAGE_EXTRACT_AND_RUN=1 VERSION="$version" \
 	"$tools/appimagetool-x86_64.AppImage" \

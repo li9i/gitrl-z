@@ -19,8 +19,6 @@ namespace GitrlzTest
 
 private static void test_synthetic_branch_ref_has_no_native()
 {
-	// It must construct without a live git reference and render as a branch
-	// pill: the label renderer reads only the short name and the ref type.
 	var r = new Gitrlz.SyntheticBranchRef("gone-feature");
 
 	assert_cmpstr(r.parsed_name.shortname, CompareOperator.EQ, "gone-feature");
@@ -37,5 +35,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

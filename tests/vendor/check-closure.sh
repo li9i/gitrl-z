@@ -1,9 +1,4 @@
 #!/bin/sh
-# Guard against drift in the vendored closure.
-#
-# src/vendor-gitg/ is code we carry, and src/vendor-gitg/meson.build is the
-# list the build actually uses. If someone copies another gitg file in, or
-# adds one to meson.build without copying it, this catches it.
 
 set -eu
 
@@ -12,7 +7,6 @@ cd "$root"
 
 status=0
 
-# Every .vala file present must be listed in meson.build, and vice versa.
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -36,7 +30,6 @@ if [ -n "$missing" ]; then
 	status=1
 fi
 
-# Every patched file must have a patch recorded (spec NFR-5).
 if [ -d vendor/upstream ]; then
 	for f in $present; do
 		if ! diff -q "vendor/upstream/$f" "src/vendor-gitg/$f" >/dev/null 2>&1; then

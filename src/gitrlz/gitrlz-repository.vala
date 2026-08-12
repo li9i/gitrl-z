@@ -26,34 +26,8 @@ public errordomain RepositoryError
 	READ_FAILED,
 }
 
-/**
- * The read-only repository layer (spec NFR-4, IC-100 to IC-107).
- *
- * open() here makes each repository handle in gitrl-z, and each repository
- * read uses one of these functions. Thus a check of the read-only guarantee
- * occurs at one location, and not across the full codebase.
- *
- * The handle is a Gitg.Repository, which *extends* Ggit.Repository and does
- * not wrap it. There is no separate Gitrlz repository type that hides the
- * Ggit API. Such a type would re-export most of that API. This class gives
- * the set of reads that gitrl-z performs, each with the error handling that
- * the spec requires.
- *
- * Ggit is not thread safe for each handle, and each call here is synchronous.
- * Thus the main loop must call these functions.
- */
 public class Repository : Object
 {
-	/*
-	 * The status flags that `git reset --hard` would destroy.
-	 *
-	 * This constant is at class scope and not in uncommitted_changes(). Vala
-	 * cannot read a local constant from a closure, and the status callback is
-	 * a closure.
-	 *
-	 * It excludes WORKING_TREE_NEW (untracked) and IGNORED, which a hard reset
-	 * does not change.
-	 */
 	private const Ggit.StatusFlags DESTRUCTIVE =
 		Ggit.StatusFlags.INDEX_NEW |
 		Ggit.StatusFlags.INDEX_MODIFIED |
@@ -66,28 +40,10 @@ public class Repository : Object
 		Ggit.StatusFlags.WORKING_TREE_RENAMED |
 		Ggit.StatusFlags.CONFLICTED;
 
-	/**
-	 * Opens the repository at a location that
-	 * Application.discover_repository found.
-	 *
-	 * This is the only location that makes a repository handle (NFR-4).
-	 */
 	public static Gitg.Repository open(File location) throws RepositoryError
 	{
 		try
 		{
-			// Gitg.init() registers the Ggit -> Gitg object factory, and the
-			// lookup_reference_dwim() of Gitg.Repository casts its result to
-			// a Gitg.Ref. Without the factory, that cast gives null. Each ref
-			// lookup then looks like a missing ref, and not like an
-			// uninitialised library. The reflog tests showed this behaviour
-			// on their first run.
-			//
-			// The call is here, and does not depend on callers. Thus each
-			// code path that gets a repository handle is correct. The call is
-			// idempotent. In the application, startup() called it before,
-			// with a display present. Thus this call does not consume the
-			// guard and does not skip the CSS (refer to vendor/patches).
 			Gitg.init();
 
 			return new Gitg.Repository(location, null);
@@ -98,20 +54,6 @@ public class Repository : Object
 		}
 	}
 
-	/**
-	 * The multi-step git operation that is in progress, or null (IC-164).
-	 *
-	 * Ggit does not give the repository state. Thus this method reads the same
-	 * filesystem markers that git_repository_state of libgit2 examines,
-	 * directly in the git directory. These are rebase-merge/ or rebase-apply/
-	 * for a rebase, then MERGE_HEAD, CHERRY_PICK_HEAD, REVERT_HEAD and
-	 * BISECT_LOG. The method examines them in that fixed order, and the first
-	 * match gives the result.
-	 *
-	 * This is a pure, read-only function of the filesystem (NFR-44, NFR-45).
-	 * If the git directory is absent or unreadable, the method reports no
-	 * operation (spec section 5).
-	 */
 	public static string? operation_in_progress(Gitg.Repository repository)
 	{
 		var git_dir = git_directory(repository);
@@ -150,14 +92,6 @@ public class Repository : Object
 		return null;
 	}
 
-	/**
-	 * The short name of a branch: "main", and not "refs/heads/main".
-	 *
-	 * The object factory returns a Gitg.BranchBase, and its get_name() gives
-	 * the full ref name. The ParsedRefName of gitg makes the name short. It
-	 * also processes the other ref prefixes, and does not assume
-	 * refs/heads/.
-	 */
 	private static string? short_name(Ggit.Ref? branch)
 	{
 		if (branch == null)
@@ -175,12 +109,6 @@ public class Repository : Object
 		return branch.get_name();
 	}
 
-	/**
-	 * Local branch names, sorted with no sensitivity to case (IC-101, P-FR-7).
-	 *
-	 * The order of git is bytewise, which puts each uppercase name before each
-	 * lowercase name. The sidebar needs them mixed, as a reader expects.
-	 */
 	public static Gee.List<string> list_branches(Gitg.Repository repository)
 	{
 		var names = new Gee.ArrayList<string>();
@@ -204,9 +132,6 @@ public class Repository : Object
 		}
 		catch (Error e)
 		{
-			// An unreadable branch list gives an empty list, as IC-2 says.
-			// There is no data to show, and this method can do nothing. The
-			// caller shows an empty sidebar.
 			warning("could not list branches: %s", e.message);
 		}
 
@@ -217,9 +142,6 @@ public class Repository : Object
 		return names;
 	}
 
-	/**
-	 * Says if the repository has a stash (IC-102, P-FR-8).
-	 */
 	public static bool has_stash(Gitg.Repository repository)
 	{
 		try
@@ -228,15 +150,10 @@ public class Repository : Object
 		}
 		catch (Error e)
 		{
-			// A missing ref throws and does not return null. Thus each error
-			// means "no stash".
 			return false;
 		}
 	}
 
-	/**
-	 * The checked-out branch, or null if HEAD is detached (IC-105).
-	 */
 	public static string? current_branch(Gitg.Repository repository)
 	{
 		try
@@ -252,19 +169,10 @@ public class Repository : Object
 		}
 		catch (Error e)
 		{
-			// An unborn HEAD throws here, and has no current branch to name.
 			return null;
 		}
 	}
 
-	/**
-	 * The commit that HEAD points at, or null if HEAD is unborn.
-	 *
-	 * This resolves HEAD to a commit and does not care whether it is on a
-	 * branch or detached. A repository with no commits has no HEAD to resolve,
-	 * and gives null. The reflog activity reads this one time, when it opens a
-	 * repository, to mark the position that the user started from.
-	 */
 	public static Ggit.OId? head_commit(Gitg.Repository repository)
 	{
 		try
@@ -275,16 +183,10 @@ public class Repository : Object
 		}
 		catch (Error e)
 		{
-			// An unborn HEAD throws here, and has no commit to name.
 			return null;
 		}
 	}
 
-	/**
-	 * Local branch tips, name to commit id (IC-104).
-	 *
-	 * The reset preview substitutes into this set (FR-124).
-	 */
 	public static Gee.Map<string, Ggit.OId> branch_tips(Gitg.Repository repository)
 	{
 		var tips = new Gee.HashMap<string, Ggit.OId>();
@@ -315,21 +217,6 @@ public class Repository : Object
 		return tips;
 	}
 
-	/**
-	 * The data that `git reset --hard` would destroy if it ran now.
-	 *
-	 * The method counts files with changes that are only in the working tree
-	 * or the index: modified, deleted, staged and conflicted files. It
-	 * excludes untracked files, because `reset --hard` does not change them. A
-	 * warning about them would be incorrect, and a repository with some unused
-	 * build artefacts would always show a warning banner.
-	 *
-	 * This is the one condition that gitrl-z can warn about and the reflog
-	 * cannot undo. A commit that a reset drops stays in the reflog.
-	 * Uncommitted work that a reset destroys is permanently lost.
-	 *
-	 * Returns 0 for a bare repository, which has no working tree.
-	 */
 	public static uint uncommitted_changes(Gitg.Repository repository)
 	{
 		if (repository.is_bare)
@@ -339,10 +226,6 @@ public class Repository : Object
 
 		uint count = 0;
 
-		// The code does not request untracked and ignored files. It does not
-		// request them and then filter them. On a large tree, a scan of them
-		// is the slow part of a status, and this method would not use the
-		// result.
 		var options = new Ggit.StatusOptions(Ggit.StatusOption.EXCLUDE_SUBMODULES,
 		                                     Ggit.StatusShow.INDEX_AND_WORKDIR,
 		                                     null);
@@ -360,9 +243,6 @@ public class Repository : Object
 		}
 		catch (Error e)
 		{
-			// A status that the code cannot read must not report as "clean".
-			// That result causes the deletion of the work of the user. Report
-			// it as unknown, by the convention of the caller.
 			warning("could not read working tree status: %s", e.message);
 			return uint.MAX;
 		}
@@ -370,13 +250,6 @@ public class Repository : Object
 		return count;
 	}
 
-	/**
-	 * The git directory, for the file monitor (IC-107, FR-130).
-	 *
-	 * This method queries the repository, and does not add ".git" to the
-	 * working directory. Thus it is correct in a linked worktree or a
-	 * submodule, where .git is a file that points to a different location.
-	 */
 	public static File? git_directory(Gitg.Repository repository)
 	{
 		return repository.get_location();
@@ -384,5 +257,3 @@ public class Repository : Object
 }
 
 }
-
-// ex:set ts=4 noet:

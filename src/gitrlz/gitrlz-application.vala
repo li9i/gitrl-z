@@ -49,15 +49,6 @@ public class Application : Gtk.Application
 		              ApplicationFlags.NON_UNIQUE);
 	}
 
-	/**
-	 * All code that must work with no display is here.
-	 *
-	 * local_command_line runs before GApplication connects to the session bus
-	 * or opens a display. Thus this is the only location that can process
-	 * --version and the not-a-repository error (spec FR-104) and still work
-	 * on a machine with no display. If either moved to command_line() or
-	 * activate(), it would depend on a display that it must not need.
-	 */
 	protected override bool local_command_line([CCode (array_length = false, array_null_terminated = true)] ref unowned string[] arguments, out int exit_status)
 	{
 		string[] copy = arguments;
@@ -76,8 +67,6 @@ public class Application : Gtk.Application
 			stderr.printf("gitrlz: %s\n", e.message);
 			stderr.printf(_("Run '%s --help' to see a full list of available options.\n"),
 			              "gitrlz");
-			// Exit 2 for a usage error, as spec section 4.1 requires and as
-			// convention expects. The default of GApplication is 1.
 			exit_status = 2;
 			return true;
 		}
@@ -89,10 +78,6 @@ public class Application : Gtk.Application
 			return true;
 		}
 
-		// An explicit path that is not in a repository is an error. The code
-		// reports it on stderr and opens no window (FR-104). This is not the
-		// same as a run with no arguments external to a repository, which
-		// opens the chooser (FR-100).
 		for (var i = 1; i < argv.length; i++)
 		{
 			var file = File.new_for_commandline_arg(argv[i]);
@@ -108,28 +93,8 @@ public class Application : Gtk.Application
 		return base.local_command_line(ref arguments, out exit_status);
 	}
 
-	/**
-	 * Finds the repository that contains a path, as git does.
-	 *
-	 * Returns the repository location, or null if the path is not in a
-	 * repository. The code first replaces a file with its parent directory
-	 * (spec FR-2). A path that does not exist is not in a repository.
-	 *
-	 * The Python implementation asked git for --show-toplevel. This method is
-	 * different: it is successful for a bare repository. A bare repository
-	 * has refs and reflogs, thus gitrl-z has data to show (spec section 5).
-	 */
 	public static File? discover_repository(File location)
 	{
-		// Discovery needs an initialised libgit2, and this method can run
-		// from local_command_line, before startup() calls Gitg.init().
-		//
-		// This code calls Ggit.init() and not Gitg.init(). A guard lets the
-		// body of Gitg.init() run one time only, and that body also installs
-		// the CSS provider. Our headless patch does not install the provider
-		// when there is no screen. A call here would mark Gitg.init()
-		// complete while there is no display. startup() would then return
-		// early and style nothing. Ggit.init() is idempotent.
 		Ggit.init();
 
 		var start = location;
@@ -148,7 +113,6 @@ public class Application : Gtk.Application
 		}
 		catch (Error e)
 		{
-			// The code cannot stat this path. Let discovery decide.
 		}
 
 		try
@@ -167,8 +131,6 @@ public class Application : Gtk.Application
 
 		try
 		{
-			// Registers the Ggit -> Gitg type factory. No code that reads a
-			// repository operates before this runs.
 			Gitg.init();
 		}
 		catch (Error e)
@@ -178,18 +140,8 @@ public class Application : Gtk.Application
 
 		Hdy.init();
 
-		// Every window and dialog takes the application icon from the icon
-		// theme. Without this, GTK sets no icon on the window, and a window
-		// list or a task switcher falls back to a generic one: the icon is
-		// installed under the application id, whereas the fallback lookup
-		// uses the name of the binary, which is not an icon name here.
 		Gtk.Window.set_default_icon_name(Config.APPLICATION_ID);
 
-		// The stylesheet of gitrl-z. Gitg.init() loads the vendored
-		// libgitg-style.css, but no code loads ours. Without our stylesheet,
-		// the command banner renders in the usual background of the theme,
-		// and not in the fixed amber that shows a command that did not run
-		// (FR-125).
 		var screen = Gdk.Screen.get_default();
 
 		if (screen != null)
@@ -242,10 +194,6 @@ public class Application : Gtk.Application
 
 		string[] authors = {"alexandros filotheou"};
 
-		// The application icon contains the Git logo, which is CC BY 3.0.
-		// Thus each distribution of the work must give attribution. The text
-		// stays untranslated, because it names a person and a licence, and
-		// these must not change with the locale.
 		string[] artists = {
 			"alexandros filotheou",
 			"Git logo by Jason Long — CC BY 3.0",
@@ -290,10 +238,6 @@ public class Application : Gtk.Application
 
 	protected override void activate()
 	{
-		// With no argument, open the repository that contains the working
-		// directory (FR-112). If the working directory is external to a
-		// repository, or with --no-wd, the window opens on the chooser
-		// (FR-100, FR-111).
 		File? location = null;
 
 		if (!s_no_wd)
@@ -314,9 +258,6 @@ public class Application : Gtk.Application
 		}
 	}
 
-	/**
-	 * Opens a window on a repository, or on the chooser if location is null.
-	 */
 	public void create_window(File? location)
 	{
 		var window = new Gitrlz.Window(this);
@@ -331,5 +272,3 @@ public class Application : Gtk.Application
 }
 
 }
-
-// ex:set ts=4 noet:

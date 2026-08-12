@@ -3,20 +3,12 @@ project(
   version: '0.5.0',
   license: 'GPL-2.0-or-later',
   default_options: 'buildtype=debugoptimized',
-  # gitg targets 0.50; we need 0.59 for gnome.post_install's
-  # update_desktop_database argument. noble ships 1.3.2.
   meson_version: '>= 0.59.0',
 )
 
-# gitrl-z is built from a vendored subtree of gitg 44 (see vendor/PROVENANCE),
-# in gitg's own language, toolkit and build system, so that it looks like the
-# gitg installed on the target platform by construction rather than by
-# imitation. This file is modelled on gitg's own meson.build, reduced to what
-# gitrl-z's compile closure actually needs.
-
 application_id = 'io.github.li9i.gitrlz'
-gitrlz_name = meson.project_name()          # gitrl-z, the package
-gitrlz_binary = 'gitrlz'                     # the command
+gitrlz_name = meson.project_name()
+gitrlz_binary = 'gitrlz'
 gitrlz_version = meson.project_version()
 gitrlz_gettext = gitrlz_binary
 
@@ -49,16 +41,6 @@ top_inc = include_directories('.')
 
 glib_req_version = '>= 2.68'
 
-# Dependencies.
-#
-# This list is gitrl-z's own, not a copy of gitg's. gitg additionally needs
-# gspell, json-glib, libsecret, gpgme, libpeas and libxml2; every one of those
-# falls out with the subsystems gitrl-z does not build.
-#
-# gtksourceview-4 was in that list until the diff pane arrived. gitg's diff
-# renderer *is* a Gtk.SourceView, for its gutter renderers, its source marks
-# and its syntax colours, and the pane is vendored rather than imitated, so the
-# dependency comes with it.
 gee_dep = dependency('gee-0.8')
 gio_dep = dependency('gio-2.0', version: glib_req_version)
 glib_dep = dependency('glib-2.0', version: glib_req_version)
@@ -79,8 +61,6 @@ config_h.set_quoted('PACKAGE_VERSION', gitrlz_version)
 config_h.set_quoted('PACKAGE_URL', 'https://github.com/li9i/gitrl-z')
 config_h.set_quoted('VERSION', gitrlz_version)
 config_h.set_quoted('PLATFORM_NAME', 'unix')
-# These three keep the vendored Gitg.Config vapi satisfied. The names are
-# gitg's; the values are ours.
 config_h.set_quoted('GITG_DATADIR', gitrlz_pkgdatadir)
 config_h.set_quoted('GITG_LOCALEDIR', gitrlz_localedir)
 config_h.set_quoted('GITG_LIBDIR', gitrlz_pkglibdir)
@@ -93,9 +73,6 @@ configure_file(
 add_project_arguments('-include', 'config.h', language: 'c')
 
 warn_flags = [
-  # -Wswitch fires ~20 times on upstream's gitg-platform-support.c, which
-  # switches on cairo_surface_type_t without listing every backend. Upstream
-  # code, harmless, and not ours to fix.
   '-Wno-switch',
   '-Wno-unused-parameter',
   '-Wno-incompatible-pointer-types',

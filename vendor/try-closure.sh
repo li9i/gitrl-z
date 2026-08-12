@@ -1,10 +1,4 @@
 #!/bin/sh
-# Attempt to compile the current src/vendor-gitg/ closure.
-#
-# Step 3 of the implementation plan computes the vendored file closure
-# empirically: compile, read what valac demands, add or sever, repeat.
-# This script is that loop's inner step. It runs valac only as far as C
-# generation — we are computing a closure, not producing a binary.
 
 set -eu
 
@@ -14,8 +8,6 @@ out=${TMPDIR:-/tmp}/gitrlz-closure
 rm -rf "$out"
 mkdir -p "$out"
 
-# A stand-in for the config.h that Meson will generate later, so
-# Gitg.Config resolves during the closure experiment.
 cat > "$out/config.h" <<'EOF'
 #define APPLICATION_ID "io.github.li9i.gitrlz"
 #define PROFILE ""

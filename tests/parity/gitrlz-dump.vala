@@ -14,25 +14,11 @@
  * details.
  */
 
-/*
- * Dump the Vala implementation's view of a repository's reflog, in the same
- * format as tests/parity/dump-python.py, for the parity audit.
- *
- * Prints one line per reflog entry:
- *
- *     <selector>\t<sha>\t<kind>\t<position>\t<branch>\t<message>
- *
- * No GTK, no display: this is the data layer only, so the comparison runs
- * anywhere the Python one does.
- */
-
 namespace GitrlzDump
 {
 
 private static string position_name(Gitrlz.OperationPosition position)
 {
-	// The Python implementation's vocabulary, so the two dumps are
-	// comparable without a translation table in the middle.
 	switch (position)
 	{
 		case Gitrlz.OperationPosition.START: return "start";
@@ -95,5 +81,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

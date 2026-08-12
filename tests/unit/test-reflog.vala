@@ -14,18 +14,6 @@
  * details.
  */
 
-/*
- * Reading reflogs through Ggit (spec IC-103), and the repository layer
- * beneath it (IC-100 to IC-105).
- *
- * Ported from the Python implementation's tests/test_reflog.py and
- * tests/test_repository.py. One thing here has no Python counterpart and
- * matters more than the rest: a differential test against the git binary.
- * The spec asserts that libgit2 numbers reflog entries with 0 as the newest,
- * matching HEAD@{0}; that is documented but it is an assumption, and every
- * selector in the UI depends on it.
- */
-
 namespace GitrlzTest
 {
 
@@ -88,7 +76,6 @@ private static void test_head_reflog_across_operations()
 		assert_cmpstr(entries[0].selector, CompareOperator.EQ, "HEAD@{0}");
 		assert_cmpstr(entries[4].selector, CompareOperator.EQ, "HEAD@{4}");
 
-		// Newest first, as git prints a reflog.
 		assert_cmpstr(entries[0].message, CompareOperator.EQ,
 		              "checkout: moving from fix to main");
 		assert_cmpstr(entries[0].new_id.to_string(), CompareOperator.EQ, second);
@@ -106,9 +93,6 @@ private static void test_head_reflog_across_operations()
 
 private static void test_read_stops_at_the_limit()
 {
-	// IC-169. The session mark reads the newest entry of every ref when a
-	// window opens, and a repository with many branches would otherwise read
-	// every one of those logs in full for one entry each.
 	try
 	{
 		var repo = Repo.create();
@@ -124,11 +108,8 @@ private static void test_read_stops_at_the_limit()
 		assert_cmpint(one.size, CompareOperator.EQ, 1);
 		assert_cmpstr(one[0].new_id.to_string(), CompareOperator.EQ, third);
 
-		// The selector counts from the log, not from the returned list, so a
-		// limited read names the same entry git names.
 		assert_cmpstr(one[0].selector, CompareOperator.EQ, "HEAD@{0}");
 
-		// A limit past the end of the log, and no limit, both give all of it.
 		assert_cmpint(Gitrlz.Reflog.read(repository, "HEAD", 99).size,
 		              CompareOperator.EQ, 3);
 		assert_cmpint(Gitrlz.Reflog.read(repository, "HEAD", 0).size,
@@ -146,11 +127,6 @@ private static void test_read_stops_at_the_limit()
 
 private static void test_matches_git_reflog_output()
 {
-	// The load-bearing assumption of IC-103, checked rather than trusted:
-	// that entry index 0 is the newest, so `HEAD@{n}` built from the index
-	// names the same commit git names. If libgit2 ordered these the other
-	// way, every selector and every row in the UI would be silently wrong,
-	// and nothing else in the suite would notice.
 	try
 	{
 		var repo = Repo.create();
@@ -165,8 +141,6 @@ private static void test_matches_git_reflog_output()
 		var repository = open_fixture(repo);
 		var entries = Gitrlz.Reflog.read(repository, "HEAD");
 
-		// %H is the full hash, %gs the reflog subject: the same two fields
-		// the Python implementation read, from the same source of truth.
 		var expected = repo.git({"reflog", "show", "HEAD", "--format=%H%x1f%gs"});
 		var lines = expected.strip().split("\n");
 
@@ -226,10 +200,8 @@ private static void test_no_stash_no_entries()
 
 		var repository = open_fixture(repo);
 
-		// P-FR-8: no stash, no sidebar entry.
 		assert_false(Gitrlz.Repository.has_stash(repository));
 
-		// And reading it anyway is empty rather than an error.
 		var entries = Gitrlz.Reflog.read(repository, "stash");
 		assert_cmpint(entries.size, CompareOperator.EQ, 0);
 
@@ -243,8 +215,6 @@ private static void test_no_stash_no_entries()
 
 private static void test_unborn_head()
 {
-	// P-FR-27: a repository with no commits opens normally — empty branch
-	// list, no stash, no entries, and no error anywhere.
 	try
 	{
 		var dir = DirUtils.make_tmp("gitrlz-unborn-XXXXXX");
@@ -308,8 +278,6 @@ private static void test_message_with_unicode_and_percent()
 
 private static void test_branches_sorted_case_insensitively()
 {
-	// P-FR-7. git's own order is bytewise, which would put Zebra before
-	// apple; the sidebar wants them mixed as a reader expects.
 	try
 	{
 		var repo = Repo.create();
@@ -347,7 +315,6 @@ private static void test_current_branch_and_detached_head()
 		assert_cmpstr(Gitrlz.Repository.current_branch(repository),
 		              CompareOperator.EQ, "main");
 
-		// IC-105: detached HEAD has no current branch.
 		repo.checkout(first);
 
 		var detached = open_fixture(repo);
@@ -406,5 +373,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

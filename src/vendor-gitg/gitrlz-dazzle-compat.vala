@@ -1,18 +1,3 @@
-/*
- * gitrl-z compatibility shim for libdazzle.
- *
- * The vendored gitg font manager (gitg-font-manager.vala, left byte-for-byte as
- * upstream wrote it) calls Dazzle.pango_font_description_to_css to turn the
- * configured monospace font into a CSS fragment for a GtkCssProvider. libdazzle
- * was removed from Ubuntu 26.04, and this one function was the only thing
- * gitrl-z used from the whole library, so rather than carry the dependency we
- * provide the function ourselves. Vala namespaces are open, so re-declaring it
- * here satisfies the vendored call site with no change to it.
- *
- * The output mirrors dzl_pango_font_description_to_css so behaviour is
- * unchanged: a run of "key:value;" declarations, only for the fields the font
- * description actually sets.
- */
 namespace Dazzle
 {
 	public string pango_font_description_to_css(Pango.FontDescription font_desc)

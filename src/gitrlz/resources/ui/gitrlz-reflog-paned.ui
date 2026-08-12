@@ -1,18 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  The reflog activity's layout (spec FR-121), modelled on gitg 44's
-  gitg-history-paned.ui: refs panel on the left, and on the right a vertical
-  split with the reflog list above and the reset preview below.
-
-  The preview's commit list is gitg's own GitgCommitListView with gitg's own
-  column set and GitgCellRendererLanes — deliberately, and this is the whole
-  point of the rewrite. FR-101 reverses the Python implementation's
-  hash-first column order in favour of gitg's, because the graph should look
-  like gitg's by construction rather than by imitation.
-
-  Dropped relative to gitg: the panel stack switcher and the diff/files panel
-  stack, both out of scope.
--->
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <template class="GitrlzReflogPaned" parent="GtkPaned">
@@ -27,12 +13,6 @@
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
 
-        <!--
-          The reflog limits (spec FR-155): a Time window and an Entries count,
-          above the refs list so they frame which reflog is chosen below. The
-          combos' default selections are set in code, because a GtkBuilder
-          "active" can be applied before the <items> exist.
-        -->
         <child>
           <object class="GtkGrid" id="d_limit_block">
             <property name="visible">True</property>
@@ -139,12 +119,6 @@
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
 
-        <!--
-          Which reflog this is. The refs panel already says which row is
-          selected, but the panel is a list of names with no statement of
-          what selecting one does, and "main" in a sidebar does not by
-          itself say "the list on the right is main's reflog".
-        -->
         <child>
           <object class="GtkLabel" id="d_reflog_caption">
             <property name="visible">True</property>
@@ -211,7 +185,6 @@
               </packing>
             </child>
 
-            <!-- P-FR-14: a dimmed placeholder, not an empty table. -->
             <child>
               <object class="GtkLabel" id="d_reflog_placeholder">
                 <property name="visible">True</property>
@@ -232,29 +205,12 @@
           </packing>
         </child>
 
-        <!--
-          The FR-140 warning and the FR-125 command banner sit at the bottom of
-          the reflog list, above the divider, rather than at the top of the
-          preview below it. Placed here, the reflog list gives up the space when
-          they appear and takes it back when they go, so the graph below the
-          divider keeps its height across a select and a deselect. The banner is
-          still visually between the two panes; only which pane yields the space
-          has changed.
-        -->
         <child>
           <object class="GtkBox" id="d_warning">
             <property name="visible">False</property>
             <property name="no_show_all">True</property>
             <property name="can_focus">False</property>
             <property name="spacing">8</property>
-            <!--
-              Per side rather than the `margin` shorthand: the shorthand sets
-              all four, and a later margin_bottom next to it is at the mercy of
-              the order GtkBuilder happens to apply them in. No bottom margin,
-              because the warning and the command banner below it are one
-              statement and they touch. The banner drops its own top margin to
-              match, but only while the warning is up (set_warning_visible).
-            -->
             <property name="margin_top">8</property>
             <property name="margin_start">8</property>
             <property name="margin_end">8</property>
@@ -339,15 +295,6 @@
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
 
-            <!--
-              What the graph below is. Placed under the command rather than
-              over it, because it labels the graph, not the command — and
-              because the slot above the banner is where the consequence
-              line was, and this is not that (§2.7).
-
-              Hidden whenever there is no graph: a caption describing a
-              graph that is not on screen is worse than no caption.
-            -->
             <child>
               <object class="GtkLabel" id="d_graph_caption">
                 <property name="visible">False</property>
@@ -421,13 +368,6 @@
                           </object>
                         </child>
                         <child>
-                          <!--
-                            No <attributes> binding: the model's column 0 is the
-                            full 40-character hash, and the graph shows the
-                            abbreviated form to match the reflog list above. The
-                            activity installs a cell data func that reads the
-                            commit and shortens it (like the date column below).
-                          -->
                           <object class="GtkTreeViewColumn" id="column_sha1">
                             <property name="title" translatable="yes">SHA1</property>
                             <property name="sizing">fixed</property>
@@ -441,14 +381,6 @@
                           </object>
                         </child>
                         <child>
-                          <!--
-                            No <attributes> binding for this one. gitg's model
-                            hands out column 6 already worded as "2 days ago",
-                            and the graph wants an exact timestamp; the
-                            activity installs a cell data func that reads the
-                            commit object and formats it as ISO instead.
-                            Widened to fit "2026-07-20 10:00:00 +0200".
-                          -->
                           <object class="GtkTreeViewColumn" id="column_date">
                             <property name="title" translatable="yes">Date</property>
                             <property name="sizing">fixed</property>
@@ -469,7 +401,6 @@
                   </packing>
                 </child>
 
-                <!-- P-FR-23, P-FR-24, P-FR-17's detached-HEAD case. -->
                 <child>
                   <object class="GtkLabel" id="d_preview_placeholder">
                     <property name="visible">True</property>

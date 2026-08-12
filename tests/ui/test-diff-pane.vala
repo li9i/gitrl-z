@@ -17,25 +17,11 @@
  * with gitrl-z. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * What the diff window puts on the screen (spec FR-172 to FR-180).
- *
- * The pane is gitg's own `Gitg.DiffView`, so these tests do not check gitg's
- * rendering: they check that gitrl-z hands it the right commit, that it builds
- * a section per file with the counts and the renderers the spec names, and that
- * the parts gitrl-z added on top behave.
- *
- * The pane's widgets are internal to the vendored library, so the tests reach
- * them by walking the widget tree rather than through accessors. A patch to
- * vendored code for a test's convenience is not worth carrying (plan step 4).
- */
-
 namespace GitrlzTest
 {
 
 private delegate bool DiffCondition();
 
-/** Every descendant of `root`, `root` itself included. */
 private static Gee.List<Gtk.Widget> descendants(Gtk.Widget root)
 {
 	var found = new Gee.ArrayList<Gtk.Widget>();
@@ -55,13 +41,6 @@ private static Gee.List<Gtk.Widget> descendants(Gtk.Widget root)
 	return found;
 }
 
-/**
- * The file sections of the pane, top to bottom.
- *
- * Sorted by the row each one sits in rather than taken as found:
- * `Gtk.Container.get_children` hands a grid's children back in the reverse of
- * the order they were added, so walking the tree reads the pane bottom up.
- */
 private static Gee.List<Gtk.Widget> file_sections(Gitg.DiffView view)
 {
 	var sections = new Gee.ArrayList<Gtk.Widget>();
@@ -79,7 +58,6 @@ private static Gee.List<Gtk.Widget> file_sections(Gitg.DiffView view)
 	return sections;
 }
 
-/** The row a file section sits in, inside the grid of files. */
 private static int section_row(Gtk.Widget section)
 {
 	var grid = section.get_parent() as Gtk.Grid;
@@ -95,7 +73,6 @@ private static int section_row(Gtk.Widget section)
 	return row.get_int();
 }
 
-/** The commit details grid at the top of the pane. */
 private static Gtk.Widget? commit_details(Gitg.DiffView view)
 {
 	foreach (var widget in descendants(view))
@@ -109,11 +86,8 @@ private static Gtk.Widget? commit_details(Gitg.DiffView view)
 	return null;
 }
 
-/** The label of a file section: its path, or `old -> new` for a rename. */
 private static string section_path(Gtk.Widget section)
 {
-	// The header label is the first label of the section, and the renderers
-	// hold no labels of their own.
 	foreach (var widget in descendants(section))
 	{
 		var label = widget as Gtk.Label;
@@ -127,7 +101,6 @@ private static string section_path(Gtk.Widget section)
 	return "";
 }
 
-/** The stat badge of a file section. */
 private static Gitg.DiffStat? section_stat(Gtk.Widget section)
 {
 	foreach (var widget in descendants(section))
@@ -143,7 +116,6 @@ private static Gitg.DiffStat? section_stat(Gtk.Widget section)
 	return null;
 }
 
-/** The names of the renderers a file section holds, from its stack. */
 private static Gee.List<string> section_renderers(Gtk.Widget section)
 {
 	var names = new Gee.ArrayList<string>();
@@ -170,7 +142,6 @@ private static Gee.List<string> section_renderers(Gtk.Widget section)
 	return names;
 }
 
-/** Unfolds every file section, as Expand all does. */
 private static void expand_all(Gitg.DiffView view)
 {
 	var details = commit_details(view);
@@ -179,7 +150,6 @@ private static void expand_all(Gitg.DiffView view)
 	details.set_property("expanded", true);
 }
 
-/** Whether a file section is unfolded. */
 private static bool section_expanded(Gtk.Widget section)
 {
 	var expanded = Value(typeof(bool));
@@ -188,7 +158,6 @@ private static bool section_expanded(Gtk.Widget section)
 	return expanded.get_boolean();
 }
 
-/** The lines of the first text renderer of a file section. */
 private static int section_line_count(Gtk.Widget section)
 {
 	foreach (var widget in descendants(section))
@@ -204,7 +173,6 @@ private static int section_line_count(Gtk.Widget section)
 	return 0;
 }
 
-/** The renderer widget a file section is showing. */
 private static Gtk.Widget visible_renderer_widget(Gtk.Widget section)
 {
 	foreach (var widget in descendants(section))
@@ -220,7 +188,6 @@ private static Gtk.Widget visible_renderer_widget(Gtk.Widget section)
 	return section;
 }
 
-/** The renderer a file section is showing, by its name in the stack. */
 private static string visible_renderer(Gtk.Widget section)
 {
 	foreach (var widget in descendants(section))
@@ -236,13 +203,6 @@ private static string visible_renderer(Gtk.Widget section)
 	return "";
 }
 
-/**
- * The text of a file section that carries `tag`, in the renderer on show.
- *
- * The marks of FR-178 are buffer tags, so what a test can read is which
- * characters they cover. Only the visible renderer is read: a section holds both
- * the split and the unified one, and both carry the marks.
- */
 private static string tagged_text(Gtk.Widget section, string tag)
 {
 	var found = "";
@@ -295,7 +255,6 @@ private static string tagged_text(Gtk.Widget section, string tag)
 	return found;
 }
 
-/** The button of the title bar switch whose label is `label`. */
 private static Gtk.RadioButton? switch_button(Gitrlz.DiffWindow window, string label)
 {
 	var header = window.get_titlebar();
@@ -314,7 +273,6 @@ private static Gtk.RadioButton? switch_button(Gitrlz.DiffWindow window, string l
 	return null;
 }
 
-/** Every label text under `root`, for asserting on the details grid. */
 private static string all_label_text(Gtk.Widget root)
 {
 	var text = "";
@@ -332,12 +290,6 @@ private static string all_label_text(Gtk.Widget root)
 	return text;
 }
 
-/**
- * The radio buttons of the parents row.
- *
- * Scoped to the details grid: the options bar at the foot of the pane holds
- * radio buttons of its own.
- */
 private static Gee.List<Gtk.RadioButton> parent_buttons(Gitg.DiffView view)
 {
 	var buttons = new Gee.ArrayList<Gtk.RadioButton>();
@@ -355,14 +307,11 @@ private static Gee.List<Gtk.RadioButton> parent_buttons(Gitg.DiffView view)
 		}
 	}
 
-	// In the order the commit lists its parents, first parent first. The grid
-	// hands its children back in the reverse of the order they were added.
 	buttons.sort((a, b) => section_row(a) - section_row(b));
 
 	return buttons;
 }
 
-/** Run a main loop until `cond` holds or `timeout_ms` elapses. */
 private static void wait_for(DiffCondition cond, uint timeout_ms = 5000)
 {
 	var loop = new MainLoop();
@@ -383,15 +332,6 @@ private static void wait_for(DiffCondition cond, uint timeout_ms = 5000)
 	loop.run();
 }
 
-/**
- * A window showing the diff of `sha`, with its sections built.
- *
- * The pane queries every file asynchronously before it builds a section, thus
- * a test that asserts straight after `show_commit` sees an empty pane. Waiting
- * for `expected` sections is what makes the assertions about the sections
- * meaningful; a commit that should have none waits for the loop to settle
- * instead.
- */
 private static Gitrlz.DiffWindow window_for(Repo repo, string sha, int expected) throws Error
 {
 	var location = Gitrlz.Application.discover_repository(repo.path);
@@ -416,8 +356,6 @@ private static Gitrlz.DiffWindow window_for(Repo repo, string sha, int expected)
 
 private static void test_a_section_per_changed_file()
 {
-	// FR-175: the pane is one section per file, in the order the diff reports
-	// them, each labelled with its path.
 	try
 	{
 		var repo = Repo.create();
@@ -446,8 +384,6 @@ private static void test_a_section_per_changed_file()
 
 private static void test_the_stat_badge_counts_the_changed_lines()
 {
-	// FR-175: the badge is what the reader sees before unfolding anything, so
-	// a wrong count is a wrong summary of the commit.
 	try
 	{
 		var repo = Repo.create();
@@ -473,8 +409,6 @@ private static void test_the_stat_badge_counts_the_changed_lines()
 
 private static void test_sections_start_folded_and_expand_all_unfolds_them()
 {
-	// FR-173: a commit over many files opens as a list of headings, and the
-	// expander in the details grid is what opens the lot.
 	try
 	{
 		var repo = Repo.create();
@@ -492,9 +426,6 @@ private static void test_sections_start_folded_and_expand_all_unfolds_them()
 			assert_false(section_expanded(section));
 		}
 
-		// Expand all lives on the details grid, and every section follows it.
-		// Reaching for the first expander in the tree would find a section's
-		// own header instead.
 		expand_all(window.view);
 
 		wait_for(() => section_expanded(sections[0]));
@@ -515,8 +446,6 @@ private static void test_sections_start_folded_and_expand_all_unfolds_them()
 
 private static void test_the_details_grid_states_the_commit()
 {
-	// FR-173: the pane, not the title bar, is where the commit's identity is
-	// stated in full.
 	try
 	{
 		var repo = Repo.create();
@@ -540,9 +469,6 @@ private static void test_the_details_grid_states_the_commit()
 
 private static void test_a_merge_offers_both_parents()
 {
-	// FR-173: a merge has two sides. The diff shows one of them, and the
-	// buttons are how the reader gets the other, which is what the old view's
-	// note could only apologise for.
 	try
 	{
 		var repo = Repo.create();
@@ -561,13 +487,11 @@ private static void test_a_merge_offers_both_parents()
 
 		assert_cmpint(buttons.size, CompareOperator.EQ, 2);
 
-		// Against the first parent, the trunk, the diff is the side's file.
 		assert_cmpstr(section_path(file_sections(window.view)[0]),
 		              CompareOperator.EQ, "side.txt");
 
 		buttons[1].active = true;
 
-		// Against the second parent, the side, it is the trunk's file.
 		wait_for(() => file_sections(window.view).size == 1
 		               && section_path(file_sections(window.view)[0]) == "trunk.txt");
 
@@ -585,7 +509,6 @@ private static void test_a_merge_offers_both_parents()
 
 private static void test_a_rename_reads_from_and_to()
 {
-	// FR-175: a rename is one change over two paths, and the header says both.
 	try
 	{
 		var repo = Repo.create();
@@ -611,7 +534,6 @@ private static void test_a_rename_reads_from_and_to()
 
 private static void test_a_commit_that_changes_nothing_shows_no_section()
 {
-	// An empty commit is not an error. The details grid stands alone.
 	try
 	{
 		var repo = Repo.create();
@@ -636,16 +558,10 @@ private static void test_a_commit_that_changes_nothing_shows_no_section()
 
 private static void test_an_image_gets_the_image_renderer()
 {
-	// FR-180: gitg shows a changed image as an image, not as a refusal. The
-	// section holds the image renderer and no text one.
 	try
 	{
 		var repo = Repo.create();
 
-		// Two 1x1 PNGs, one red and one blue. Both have to decode: the renderer
-		// is chosen from the mime type, but it then loads the image, and a blob
-		// with a bad CRC leaves a failed load behind that lands in whatever test
-		// runs next.
 		uint8[] first = {
 			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 			0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -684,8 +600,6 @@ private static void test_an_image_gets_the_image_renderer()
 
 private static void test_a_binary_file_gets_the_binary_notice()
 {
-	// FR-180: a changed binary that is not an image says so, rather than
-	// showing an empty section.
 	try
 	{
 		var repo = Repo.create();
@@ -713,8 +627,6 @@ private static void test_a_binary_file_gets_the_binary_notice()
 
 private static void test_the_context_lines_change_what_a_section_holds()
 {
-	// FR-179: the options bar moves this, and moving it re-reads the diff.
-	// The bar is looked at by hand; the property is what a test can hold.
 	try
 	{
 		var repo = Repo.create();
@@ -751,8 +663,6 @@ private static void test_the_context_lines_change_what_a_section_holds()
 
 private static void test_the_switch_moves_every_section()
 {
-	// FR-176: one control in the title bar, not one per file, and it moves the
-	// whole window.
 	try
 	{
 		var repo = Repo.create();
@@ -799,8 +709,6 @@ private static void test_the_switch_moves_every_section()
 
 private static void test_the_switch_is_remembered()
 {
-	// FR-176: a diff opens the way the last one was left, so the choice has to
-	// reach the key and the key has to reach a new window.
 	try
 	{
 		var repo = Repo.create();
@@ -823,7 +731,6 @@ private static void test_the_switch_is_remembered()
 		assert_cmpstr(visible_renderer(file_sections(second.view)[0]),
 		              CompareOperator.EQ, "text");
 
-		// Left as it was found, so the order of the tests cannot matter.
 		switch_button(second, "Split").active = true;
 
 		second.destroy();
@@ -837,8 +744,6 @@ private static void test_the_switch_is_remembered()
 
 private static void test_an_image_keeps_its_renderer_through_the_switch()
 {
-	// FR-176: an image section has no text renderer to switch to, and asking
-	// for one must leave it alone rather than empty it.
 	try
 	{
 		var repo = Repo.create();
@@ -887,9 +792,6 @@ private static void test_an_image_keeps_its_renderer_through_the_switch()
 
 private static void test_the_changed_words_are_marked()
 {
-	// FR-178: the line tint says a line changed, and the marks say which words.
-	// gitg has no such mark; this is the one thing the pane keeps from the view
-	// it replaced.
 	try
 	{
 		var repo = Repo.create();
@@ -910,7 +812,6 @@ private static void test_the_changed_words_are_marked()
 		assert_cmpstr(tagged_text(section, "word-added"), CompareOperator.EQ, "cat|");
 		assert_cmpstr(tagged_text(section, "word-removed"), CompareOperator.EQ, "fox|");
 
-		// The same in the unified renderer, which holds both sides in one buffer.
 		switch_button(window, "Unif").active = true;
 
 		wait_for(() => tagged_text(file_sections(window.view)[0], "word-added") != "");
@@ -933,8 +834,6 @@ private static void test_the_changed_words_are_marked()
 
 private static void test_a_line_with_no_counterpart_takes_no_marks()
 {
-	// FR-178: a line that replaced nothing has no words to compare, so it keeps
-	// its tint and nothing else. Marking it would mark the whole line twice.
 	try
 	{
 		var repo = Repo.create();
@@ -970,8 +869,6 @@ public static int main(string[] args)
 
 	if (!Gtk.init_check(ref args))
 	{
-		// No display: report as skipped rather than failed. The suite is run
-		// under tests/ui/run-xvfb.sh, which provides one.
 		stdout.printf("1..0 # SKIP no display available\n");
 		return 0;
 	}
@@ -1021,5 +918,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

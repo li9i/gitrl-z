@@ -17,32 +17,12 @@
 namespace Gitrlz
 {
 
-/**
- * A range of bytes inside one line of a diff.
- *
- * The offsets are byte offsets into the line text, which is what
- * string.substring and the rest of the GLib string calls take. `end` is one
- * past the last byte of the range.
- */
 public struct WordSpan
 {
 	int start;
 	int end;
 }
 
-/**
- * The parts of a changed line that actually changed.
- *
- * A unified diff works in whole lines. One corrected word in a long sentence
- * marks the full sentence, and the reader is left to find the word. meld marks
- * the word as well as the line, and this class computes those marks for the
- * diff view of gitrl-z.
- *
- * refine() pairs a removed line with the added line that replaced it, cuts
- * both into words, and reports the words that are not common to the two. The
- * match is a longest common subsequence over the words, which is what the
- * line-level diff of git does over lines.
- */
 public class WordDiff : Object
 {
 	private enum TokenKind
@@ -59,35 +39,10 @@ public class WordDiff : Object
 		TokenKind kind;
 	}
 
-	/**
-	 * The longest pair of lines that takes a refinement.
-	 *
-	 * The word match costs the product of the two token counts. A minified
-	 * script or a data file holds lines of thousands of tokens, where that
-	 * product is large and the marks are of no use anyway. Such a line keeps
-	 * its line tint and gets no word marks.
-	 */
 	private const int MAX_TOKENS = 400;
 
-	/**
-	 * The part of the shorter line that must be common for a refinement.
-	 *
-	 * Two lines that share almost nothing are a rewrite and not an edit. There
-	 * the marks would cover the whole line, which the line tint already says,
-	 * and a pairing of unrelated lines would mark words at random. Thus a
-	 * refinement needs at least this part of the words of the shorter line to
-	 * be common. The value is a divisor: 3 is a third.
-	 */
 	private const int MIN_COMMON_PART = 3;
 
-	/**
-	 * The words of `old_text` and `new_text` that are not common to the two.
-	 *
-	 * Returns false when the two lines take no refinement, either because they
-	 * are too long to match or because they have too little in common to be
-	 * one edit. The caller then shows the line tint alone. The spans are empty
-	 * in that case.
-	 */
 	public static bool refine(string old_text,
 	                          string new_text,
 	                          out WordSpan[] old_spans,
@@ -127,16 +82,6 @@ public class WordDiff : Object
 		return old_spans.length > 0 || new_spans.length > 0;
 	}
 
-	/**
-	 * refine(), with the spans flattened into pairs of offsets.
-	 *
-	 * The diff renderer that draws the marks is vendored gitg code, which cannot
-	 * name a type of this namespace, so it asks for start and end in one array:
-	 * `{ start, end, start, end, ... }`. Byte offsets, as refine() gives them.
-	 *
-	 * This is the form `Gitg.DiffViewFileRendererText.word_marks` takes, and the
-	 * application installs it there at startup.
-	 */
 	public static bool refine_flat(string old_text,
 	                               string new_text,
 	                               out int[] old_spans,
@@ -159,7 +104,6 @@ public class WordDiff : Object
 		return true;
 	}
 
-	/** The number of tokens that carry text and are common to both lines. */
 	private static int common_count(Token[] tokens, bool[] common)
 	{
 		var count = 0;
@@ -175,7 +119,6 @@ public class WordDiff : Object
 		return count;
 	}
 
-	/** Spans as start and end in one array, the form refine_flat() reports. */
 	private static int[] flattened(WordSpan[] spans)
 	{
 		var flat = new int[spans.length * 2];
@@ -199,13 +142,6 @@ public class WordDiff : Object
 		return c.isalnum() || c == '_' ? TokenKind.WORD : TokenKind.OTHER;
 	}
 
-	/**
-	 * Marks the tokens that the two lines have in common.
-	 *
-	 * This is the standard longest common subsequence: a table of the match
-	 * length from each pair of positions to the end of the two lines, then one
-	 * walk forward through the table that takes the matches.
-	 */
 	private static void match(string[] old_words,
 	                          string[] new_words,
 	                          bool[] old_common,
@@ -249,18 +185,6 @@ public class WordDiff : Object
 		}
 	}
 
-	/**
-	 * The spans that cover the tokens which are not common.
-	 *
-	 * Tokens beside each other join into one span, so that a changed phrase
-	 * takes one mark and not one for each word. A span does not begin or end
-	 * on whitespace: a mark that reaches into the gap before the next word
-	 * reads as a change to that gap.
-	 *
-	 * Whitespace never holds a span open or closed. Every gap of one space is
-	 * the same text, thus the match calls them all common, and a phrase of two
-	 * changed words would break into one mark for each word.
-	 */
 	private static WordSpan[] spans_of(Token[] tokens, bool[] common)
 	{
 		var spans = new WordSpan[] {};
@@ -277,8 +201,6 @@ public class WordDiff : Object
 			{
 				if (tokens[i].kind == TokenKind.SPACE && first < 0)
 				{
-					// Whitespace cannot open a span. It joins one that is
-					// already open, and then only if a further token follows.
 					continue;
 				}
 
@@ -307,7 +229,6 @@ public class WordDiff : Object
 		return spans;
 	}
 
-	/** The text of each token, for the match. */
 	private static string[] texts_of(string text, Token[] tokens)
 	{
 		var words = new string[tokens.length];
@@ -320,14 +241,6 @@ public class WordDiff : Object
 		return words;
 	}
 
-	/**
-	 * Cuts a line into words, runs of whitespace, and single other characters.
-	 *
-	 * A punctuation character is its own token, so that a change from `foo()`
-	 * to `foo(bar)` marks `bar` and not the whole call. Whitespace stays in
-	 * the token list, because the spans are byte ranges of the original line
-	 * and the tokens must cover it with no gap.
-	 */
 	private static Token[] tokenise(string text)
 	{
 		var tokens = new Token[] {};
@@ -368,7 +281,6 @@ public class WordDiff : Object
 		return tokens;
 	}
 
-	/** The number of tokens that carry text rather than whitespace. */
 	private static int word_count(Token[] tokens)
 	{
 		var count = 0;
@@ -386,5 +298,3 @@ public class WordDiff : Object
 }
 
 }
-
-// ex:set ts=4 noet:

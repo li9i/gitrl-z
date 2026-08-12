@@ -1,16 +1,3 @@
-# Vendored gitg 44 subtree.
-#
-# The file list is the compile closure of the subsystems gitrl-z builds. Do
-# not add to it casually: every file here is code we carry and must
-# re-reconcile whenever we rebase onto a newer gitg.
-#
-# These build into a *static* library, not a shared one and not straight into
-# the binary. Static because nothing outside gitrl-z links them, so a private
-# .so would only add an rpath, a soname and an install path to get wrong. A
-# library rather than loose sources because the test executables link the same
-# code, and recompiling 46 vendored files per test binary would make the suite
-# unusably slow.
-
 vendor_gitg_sources = files(
   'libgitg/gitg-assembly-info.vala',
   'libgitg/gitg-async.vala',
@@ -82,12 +69,8 @@ vendor_gitg_sources = files(
   'libgitg-ext/gitg-ext-user-query.vala',
 )
 
-# C support used by gitg-utils.vala to resolve the user's home directory.
 vendor_gitg_sources += files('libgitg/gitg-platform-support.c')
 
-# gitrl-z compatibility shim: reimplements the single libdazzle function the
-# vendored font manager calls, so libgitg builds without libdazzle (dropped in
-# Ubuntu 26.04). Not gitg source, kept out of the libgitg/ file list above.
 vendor_gitg_sources += files('gitrlz-dazzle-compat.vala')
 
 vendor_gitg_resources = gnome.compile_resources(
@@ -115,19 +98,8 @@ vendor_gitg_vala_flags = [
   '--gresourcesdir', join_paths(meson.current_source_dir(), 'libgitg/resources'),
 ]
 
-# The generated C includes <libgitg/gitg-platform-support.h>, so the search
-# path is this directory, not libgitg/ inside it.
 vendor_gitg_inc = include_directories('.')
 
-# The compiled resources are deliberately NOT part of this library.
-#
-# glib-compile-resources registers the bundle from a constructor in the
-# generated object file, and nothing references that object by symbol, so a
-# plain static link discards it and every [GtkTemplate] lookup then fails at
-# runtime with "resource does not exist". link_whole would fix that, but
-# Meson cannot link_whole one static Vala library into another. Compiling the
-# resources into each final binary instead sidesteps both problems: an
-# executable's own sources are never discarded.
 libvendor_gitg = static_library(
   'gitrlz-vendor-gitg',
   vendor_gitg_sources,
@@ -145,6 +117,4 @@ vendor_gitg_dep = declare_dependency(
   dependencies: vendor_gitg_deps,
 )
 
-# Anything linking the vendored library needs valac pointed at the generated
-# .vapi, which lands in the library's build directory.
 vendor_gitg_vapidir = meson.current_build_dir()

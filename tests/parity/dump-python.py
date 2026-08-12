@@ -28,7 +28,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-from gitrlz import gitcmd, reflog  # noqa: E402
+from gitrlz import gitcmd, reflog
 
 
 def main():
@@ -45,8 +45,6 @@ def main():
         print("error: {}".format(error), file=sys.stderr)
         return 1
 
-    # The Vala side seeds branch attribution with the current branch, so this
-    # must too or the two disagree on entries older than the first checkout.
     current = gitcmd.current_branch(repo)
 
     operations = reflog.classify_operations(entries)

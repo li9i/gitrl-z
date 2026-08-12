@@ -1,17 +1,4 @@
 #!/bin/sh
-# Build the lane-rich fixture the visual suite measures.
-#
-# Deterministic by construction: fixed author and committer dates, fixed
-# identity, no global or system git config. Two runs produce byte-identical
-# repositories, which the suite depends on — a fixture that drifts turns every
-# geometry comparison into noise.
-#
-# Chosen for lane richness rather than to make gitg and gitrl-z show the same
-# commits. They do not need to: the comparison measures lane spacing, dot
-# geometry, pill geometry and colours, all of which are readable from two
-# different graphs (spec 6.3).
-#
-#   tests/visual/fixture.sh <directory>
 
 set -eu
 
@@ -43,7 +30,6 @@ commit() {
 commit a.txt a "initial commit"
 commit b.txt b "second commit"
 
-# A branch that diverges and merges back: two lanes and a join.
 git checkout -q -b feature
 commit f.txt f "feature work"
 commit f2.txt f2 "more feature work"
@@ -52,14 +38,11 @@ git checkout -q main
 commit m.txt m "main work"
 git merge -q --no-ff -m "merge feature" feature
 
-# A third branch, left unmerged: a lane that stays open to the top.
 git checkout -q -b topic HEAD~2
 commit t.txt t "topic work"
 
-# A rebase, so the reflog carries a bracketed run.
 git rebase -q main
 
-# And a stash, so the stash entry exists in the sidebar.
 git checkout -q main
 printf 'dirty\n' >> m.txt
 git stash push -q -m "work in progress"

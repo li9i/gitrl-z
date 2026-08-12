@@ -20,19 +20,6 @@
 namespace GitrlzTest
 {
 
-/**
- * A scratch git repository driven by real git commands.
- *
- * Ported from tests/conftest.py's Repo class, which is the specification of
- * what the fixtures look like. Identity and dates are pinned so that hashes
- * and timestamps are deterministic: the visual regression suite (spec 6.3)
- * needs byte-identical repositories across runs, and the unit tests need to
- * assert on exact ISO dates.
- *
- * Test code may write to a repository. The application may not (spec NFR-4);
- * that asymmetry is deliberate and is why this helper shells out to git
- * rather than going through anything gitrl-z ships.
- */
 public class Repo : Object
 {
 	public const string AUTHOR_DATE = "2026-07-20 10:00:00 +0200";
@@ -51,14 +38,6 @@ public class Repo : Object
 			location.make_directory_with_parents();
 		}
 
-		// Pinning the dates makes commit hashes reproducible. Pointing the
-		// git config files at /dev/null keeps the developer's own git
-		// configuration from leaking into a fixture.
-		//
-		// Built with Environ.set_variable rather than assembled by hand:
-		// Process.spawn_sync's envp binding is declared null-terminated, and
-		// an array built up in Vala is not. Environ.get() and
-		// Environ.set_variable() both return proper NULL-terminated strv.
 		var env = Environ.get();
 
 		env = Environ.set_variable(env, "GIT_AUTHOR_DATE", AUTHOR_DATE, true);
@@ -73,25 +52,12 @@ public class Repo : Object
 		git({"config", "user.email", "test@example.com"});
 	}
 
-	/**
-	 * Create a repository in a fresh temporary directory.
-	 *
-	 * The caller owns the directory and should remove it; see remove().
-	 */
 	public static Repo create() throws Error
 	{
 		var dir = DirUtils.make_tmp("gitrlz-test-XXXXXX");
 		return new Repo(File.new_for_path(dir));
 	}
 
-	/**
-	 * Plant an in-progress-operation marker under the git directory.
-	 *
-	 * Lets a test assert the mid-operation warning without driving a real
-	 * conflicting rebase or merge. "rebase" creates the rebase-merge directory;
-	 * every other marker (MERGE_HEAD, CHERRY_PICK_HEAD, REVERT_HEAD, BISECT_LOG)
-	 * is written as an empty file, exactly as git leaves them.
-	 */
 	public void begin_operation(string marker) throws Error
 	{
 		var git_dir = path.get_child(".git");
@@ -115,9 +81,6 @@ public class Repo : Object
 		git({"checkout", "--quiet", target});
 	}
 
-	/**
-	 * Write a file, stage everything and commit. Returns the new sha.
-	 */
 	public string commit(string message = "commit", string? filename = null, string? content = null) throws Error
 	{
 		var name = filename != null ? filename : "file.txt";
@@ -139,16 +102,6 @@ public class Repo : Object
 		return git({"rev-parse", "HEAD"}).strip();
 	}
 
-	/**
-	 * Commit at a distinct date, for tests that need a realistic walk order.
-	 *
-	 * The other methods pin every date to one instant, which suits most
-	 * assertions but gives the revision walker a degenerate order in which
-	 * branches never sit as inactive lanes. A test that needs gitg's graph to
-	 * interleave the way a real history does sets increasing dates through
-	 * this. `day` is a whole-day offset from a fixed base, and it drives the
-	 * committer date, which is what the walk sorts on.
-	 */
 	public string commit_at(int day, string message, string? filename = null) throws Error
 	{
 		var name = filename != null ? filename : "file.txt";
@@ -166,14 +119,6 @@ public class Repo : Object
 		return git({"rev-parse", "HEAD"}).strip();
 	}
 
-	/**
-	 * Write a file from raw bytes, stage everything and commit.
-	 *
-	 * `commit` goes through FileUtils.set_contents and so carries text only. A
-	 * test that needs git to call a file binary, or needs a real image, needs
-	 * bytes: a NUL in the first bytes is what git reads as binary, and an image
-	 * has to be a valid one before the pane will render it.
-	 */
 	public string commit_bytes(string message, string filename, uint8[] content) throws Error
 	{
 		var target = path.get_child(filename);
@@ -187,12 +132,6 @@ public class Repo : Object
 		return git({"rev-parse", "HEAD"}).strip();
 	}
 
-	/**
-	 * Delete a branch outright, as `git branch -D` does.
-	 *
-	 * Lets a test set up a deleted-branch recovery: the branch's name survives
-	 * in HEAD's reflog attribution after the ref itself is gone.
-	 */
 	public void delete_branch(string name) throws Error
 	{
 		git({"branch", "-D", name});
@@ -208,9 +147,6 @@ public class Repo : Object
 		git({"reset", "--quiet", "--hard", target});
 	}
 
-	/**
-	 * Stash pending changes. The caller dirties the tree first.
-	 */
 	public void stash(string? message = null) throws Error
 	{
 		if (message != null)
@@ -223,20 +159,13 @@ public class Repo : Object
 		}
 	}
 
-	/**
-	 * Run git in this repository under the pinned environment.
-	 */
 	public string git(string[] args) throws Error
 	{
 		return run_git(args, d_env);
 	}
 
-	/**
-	 * Run git under a caller-supplied environment.
-	 */
 	private string run_git(string[] args, string[] env) throws Error
 	{
-		// Null-terminated, for the same reason as the environment above.
 		string[] argv = {};
 		argv += "git";
 		argv += "-C";
@@ -272,9 +201,6 @@ public class Repo : Object
 		return out;
 	}
 
-	/**
-	 * Recursively remove the repository directory.
-	 */
 	public void remove()
 	{
 		try
@@ -309,5 +235,3 @@ public class Repo : Object
 }
 
 }
-
-// ex:set ts=4 noet:

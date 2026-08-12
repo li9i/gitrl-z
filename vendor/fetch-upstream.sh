@@ -1,9 +1,4 @@
 #!/bin/sh
-# Fetch and verify the gitg source that src/vendor-gitg/ is cut from.
-#
-# The extracted tree is not committed (19 MB of code we do not modify), so
-# this script reproduces it on demand. See PROVENANCE for why this exact
-# tarball is the right one.
 
 set -eu
 

@@ -25,14 +25,6 @@
 namespace Gitrlz
 {
 
-/**
- * The repository chooser (spec FR-100, FR-111).
- *
- * gitrl-z shows this view when it starts external to a repository. The dash
- * button in the header bar also opens it. It shows the repositories used most
- * recently, a search entry that filters them, and a button that opens a
- * repository which is not in the list.
- */
 public class DashView : Gtk.Box
 {
 	private Gitg.RepositoryListBox d_repository_list;
@@ -75,8 +67,6 @@ public class DashView : Gtk.Box
 
 		add(scrolled);
 
-		// Fills the list from Gtk.RecentManager the first time, then from
-		// its own bookmark file.
 		d_repository_list.populate_bookmarks();
 
 		show_all();
@@ -108,12 +98,6 @@ public class DashView : Gtk.Box
 		chooser.destroy();
 	}
 
-	/**
-	 * Opens a selected directory. If the directory is not a repository, this
-	 * method reports the error and does not throw. It uses the same discovery
-	 * as the command line. Thus a directory in a repository opens that
-	 * repository (spec FR-2).
-	 */
 	private void open_location(File file)
 	{
 		var location = Gitrlz.Application.discover_repository(file);
@@ -127,9 +111,6 @@ public class DashView : Gtk.Box
 
 		try
 		{
-			// Through Gitrlz.Repository.open, and not a direct construction.
-			// That method is the one location that makes a repository handle
-			// (NFR-4), and the only location where Gitg.init() ran first.
 			repository_activated(Gitrlz.Repository.open(location));
 		}
 		catch (Error e)
@@ -140,5 +121,3 @@ public class DashView : Gtk.Box
 }
 
 }
-
-// ex:set ts=4 noet:

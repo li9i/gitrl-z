@@ -32,19 +32,11 @@ from collections import Counter
 
 try:
     from PIL import Image
-except ImportError:  # pragma: no cover
+except ImportError:
     print("python3-pil is required", file=sys.stderr)
     raise SystemExit(2)
 
 
-# gitg's lane palette, copied from src/vendor-gitg/libgitg/gitg-color.vala.
-#
-# Matching against the palette rather than against "looks saturated" is what
-# makes this measurement trustworthy. The earlier heuristic could not tell a
-# lane dot from Adwaita's selection blue or from a blue ref pill, and reported
-# eight lanes of #3584e4 on a graph whose lanes are plainly yellow and green.
-# The palette is not a guess about what a lane looks like — it is the
-# definition of one.
 PALETTE = [
     (196, 160, 0),
     (78, 154, 6),
@@ -62,8 +54,6 @@ PALETTE = [
     (239, 41, 41),
 ]
 
-# Antialiasing and the dot's darker outline shift a pixel a little off the
-# nominal colour, so an exact match would find only the dot's core.
 TOLERANCE = 24
 
 
@@ -93,11 +83,6 @@ def load(path):
     return Image.open(path).convert("RGB")
 
 
-# A commit dot is a small filled circle. Anything much wider than this on a
-# scanline is not a dot: a selection highlight spans the whole list, and a
-# header bar spans the window. Without an upper bound those swamp the
-# measurement completely — the first run of this code reported a "dot radius"
-# of 224 px and 28 "lanes", all of them Adwaita's selection blue.
 DOT_MIN_WIDTH = 5
 DOT_MAX_WIDTH = 16
 
@@ -141,13 +126,10 @@ def find_dot_rows(image):
     centres = []
 
     for y in range(1, image.height - 1):
-        # A local maximum that is wide enough to be a dot rather than a lane
-        # line (lanes are ~2 px, dots ~7-9 px across).
         if (DOT_MIN_WIDTH <= widths[y] <= DOT_MAX_WIDTH
                 and widths[y] >= widths[y - 1] and widths[y] > widths[y + 1]):
             centres.append(y)
 
-    # Collapse centres that are adjacent (a dot can plateau over two rows).
     collapsed = []
 
     for y in centres:
@@ -165,14 +147,9 @@ def measure(path):
     if len(dot_rows) < 2:
         raise SystemExit("found fewer than two commit dots; is this a graph?")
 
-    # Row height: the most common gap between consecutive dot rows. The mode
-    # rather than the mean, because a graph with a merge has rows whose dots
-    # sit in different lanes and occasional gaps of two rows.
     gaps = [b - a for a, b in zip(dot_rows, dot_rows[1:])]
     row_height = Counter(gaps).most_common(1)[0][0]
 
-    # Lane centres and colours, gathered across every dot row so that lanes
-    # which only appear partway down are still seen.
     centres = []
     colours = {}
 
@@ -181,16 +158,12 @@ def measure(path):
             width = end - start + 1
 
             if width < DOT_MIN_WIDTH or width > DOT_MAX_WIDTH:
-                # A lane line (too narrow) or UI chrome (too wide).
                 continue
 
             centre = (start + end) // 2
             centres.append(centre)
             colours.setdefault(centre, []).append(colour)
 
-    # A lane is vertical: its dots sit at the same x on several rows. A ref
-    # pill sits at one x on one row, and gitg's pill blue is itself a palette
-    # colour (#204a87), so colour alone cannot separate them — recurrence can.
     seen_rows = {}
 
     for y in dot_rows:
@@ -214,11 +187,6 @@ def measure(path):
         spacings = [b - a for a, b in zip(unique, unique[1:])]
         lane_spacing = Counter(spacings).most_common(1)[0][0]
 
-    # Dot radius: half the widest run on a dot row, which is the dot's
-    # diameter at its centre.
-    # Measured only on lanes, for the same reason: a pill would otherwise set
-    # the "dot" diameter. The mode rather than the maximum, since a dot that
-    # overlaps a connector reads wider than it is.
     diameters = []
 
     for y in dot_rows:

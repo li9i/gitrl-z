@@ -17,15 +17,6 @@
  * with gitrl-z. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * The settings schema (spec FR-116).
- *
- * Every key gitrl-z reads must exist, with the documented type and default.
- * A missing schema key is not a graceful failure in GLib: it aborts the
- * process, so getting this wrong takes the whole application down at
- * startup rather than degrading.
- */
-
 namespace GitrlzTest
 {
 
@@ -43,8 +34,6 @@ private static void test_interface_defaults()
 	assert_cmpstr(s.get_string("monospace-font-name"), CompareOperator.EQ, "Monospace 12");
 	assert_true(s.get_boolean("enable-monitoring"));
 
-	// The three keys the diff pane reads (spec IC-177). Avatars are off by
-	// default, as in gitg, so no diff reaches the network unasked.
 	assert_false(s.get_boolean("use-gravatar"));
 	assert_true(s.get_boolean("enable-diff-highlighting"));
 	assert_cmpstr(s.get_string("style-scheme"), CompareOperator.EQ, "classic");
@@ -54,8 +43,6 @@ private static void test_diff_defaults()
 {
 	var s = settings_for("preferences.diff");
 
-	// Every default is gitg's own (spec NFR-51), including the two that read
-	// as surprising: lines do not wrap, and whitespace is not ignored.
 	assert_false(s.get_boolean("ignore-whitespace"));
 	assert_false(s.get_boolean("changes-inline"));
 	assert_false(s.get_boolean("wrap"));
@@ -65,9 +52,6 @@ private static void test_diff_defaults()
 
 private static void test_commit_message_defaults()
 {
-	// The vendored commit details grid constructs this schema by id rather
-	// than looking it up first, so a missing schema takes the process down
-	// the moment a diff opens.
 	var s = settings_for("preferences.commit.message");
 
 	assert_cmpstr(s.get_string("datetime-selection"), CompareOperator.EQ, "predefined");
@@ -79,14 +63,11 @@ private static void test_diff_state_defaults()
 {
 	var s = settings_for("state.diff");
 
-	// A diff opens in the split renderer (spec FR-176).
 	assert_cmpstr(s.get_string("renderer"), CompareOperator.EQ, "split");
 }
 
 private static void test_preferences_lists_its_children()
 {
-	// The dialog and the diff window reach these through the parent schema,
-	// so a child left unlisted is a key nothing can read.
 	var source = SettingsSchemaSource.get_default();
 	var schema = source.lookup("%s.preferences".printf(Gitrlz.Config.APPLICATION_ID),
 	                           true);
@@ -106,7 +87,6 @@ private static void test_reflog_defaults()
 
 	assert_cmpint(s.get_int("collapse-inactive-lanes"), CompareOperator.EQ, 2);
 	assert_true(s.get_boolean("collapse-inactive-lanes-enabled"));
-	// P-FR-22: the graph draws at most this many commits.
 	assert_cmpint(s.get_int("commit-limit"), CompareOperator.EQ, 2000);
 }
 
@@ -133,8 +113,6 @@ private static void test_reflog_state_defaults()
 
 private static void test_values_round_trip()
 {
-	// A memory backend keeps the developer's real settings untouched while
-	// still exercising the schema's types.
 	var s = settings_for("preferences.reflog");
 
 	s.set_int("commit-limit", 500);
@@ -148,10 +126,6 @@ private static void test_values_round_trip()
 
 private static void test_orientation_is_an_enum()
 {
-	// Proving the key is the Layout enum rather than a plain string, by
-	// reading the schema rather than by trying to set a bad value: GLib
-	// treats an out-of-range enum value as a fatal warning, so probing it
-	// would abort the test process rather than return false.
 	var source = SettingsSchemaSource.get_default();
 	var schema = source.lookup("%s.preferences.interface".printf(Gitrlz.Config.APPLICATION_ID),
 	                           true);
@@ -174,7 +148,6 @@ private static void test_orientation_is_an_enum()
 
 public static int main(string[] args)
 {
-	// Never touch the user's real dconf database from a test.
 	Environment.set_variable("GSETTINGS_BACKEND", "memory", true);
 
 	Test.init(ref args);
@@ -194,5 +167,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

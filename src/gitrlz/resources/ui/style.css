@@ -1,12 +1,3 @@
-/*
- * Application stylesheet, taken from gitg 44's gitg/resources/ui/style.css.
- *
- * Kept as-is rather than trimmed: the palette definitions and widget rules
- * here are part of what makes gitrl-z look like gitg, and pruning them by
- * guesswork is exactly the hand-tuning this rewrite exists to avoid. Rules
- * naming widgets gitrl-z does not build simply never match.
- */
-
 @define-color butter1 #fce94f;
 @define-color butter2 #edd400;
 @define-color butter3 #c4a000;
@@ -146,13 +137,6 @@ GitgHistoryRefRow {
 	border-top: 1px solid @borders;
 }
 
-/*
- * The command banner (FR-125, P-FR-19).
- *
- * Both colours are fixed rather than taken from the theme, so they stay
- * legible against each other under a light or a dark theme alike. Amber
- * marks it as a command that has NOT been run: gitrl-z never runs it.
- */
 .gitrlz-command-banner {
 	background-color: #fcf3d0;
 }
@@ -162,15 +146,6 @@ GitgHistoryRefRow {
 	font-family: monospace;
 }
 
-/*
- * Copied. Green means "this exact command is on your clipboard right now",
- * and it stays until the banner shows a different command — a claim about
- * the clipboard should not outlive the thing it refers to.
- *
- * Fixed colours for the same reason as the amber above: the pair has to stay
- * legible against each other under a light or a dark theme alike, and a
- * themed green could land anywhere.
- */
 .gitrlz-command-banner.copied {
 	background-color: #d7f0c8;
 }
@@ -179,14 +154,6 @@ GitgHistoryRefRow {
 	color: #2c5c17;
 }
 
-/*
- * The uncommitted-changes warning (item 1).
- *
- * Red rather than amber, and deliberately louder than the command banner
- * below it: everything else gitrl-z previews is recoverable from the reflog,
- * and this is the one thing that is not. Fixed colours, for the same reason
- * as the banner's.
- */
 .gitrlz-warning {
 	background-color: #f8d7da;
 }
@@ -196,14 +163,6 @@ GitgHistoryRefRow {
 	font-weight: bold;
 }
 
-/*
- * Panel captions: what this list is, and what this graph is.
- *
- * Dim and small on purpose. They are orientation, read once and then
- * ignored, and they sit next to the two things that must stay loud — the
- * command and the warning. A caption competing with those would be worse
- * than no caption.
- */
 .gitrlz-caption {
 	font-size: 0.9em;
 	color: @insensitive_fg_color;

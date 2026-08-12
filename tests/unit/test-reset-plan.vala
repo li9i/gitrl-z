@@ -14,14 +14,6 @@
  * details.
  */
 
-/*
- * The multi-branch reset plan (spec FR-148, FR-152, IC 4.1).
- *
- * Pure logic: no repository, no widget. Commits are stand-in OIds built from
- * hex strings, because the plan cares only about branch names and commit
- * identity, not about anything the objects actually contain.
- */
-
 namespace GitrlzTest
 {
 
@@ -30,7 +22,6 @@ private static Ggit.OId oid(string hex) throws Error
 	return new Ggit.OId.from_string(hex);
 }
 
-// Four distinct, valid 40-hex ids to move branches between.
 private const string A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 private const string B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 private const string C = "cccccccccccccccccccccccccccccccccccccccc";
@@ -81,8 +72,6 @@ private static void test_toggle_moves_the_target_within_a_branch()
 		var plan = new Gitrlz.ResetPlan();
 
 		plan.toggle("feature", oid(A));
-		// A different row in the same branch moves the target, it does not add
-		// a second entry: a branch has one position.
 		plan.toggle("feature", oid(B));
 
 		assert_cmpint(plan.size, CompareOperator.EQ, 1);
@@ -107,7 +96,6 @@ private static void test_branches_are_independent()
 
 		assert_cmpint(plan.size, CompareOperator.EQ, 2);
 
-		// Toggling one branch off leaves the other untouched.
 		plan.toggle("feature", oid(A));
 
 		assert_cmpint(plan.size, CompareOperator.EQ, 1);
@@ -128,8 +116,6 @@ private static void test_contains_distinguishes_the_commit()
 
 		plan.toggle("feature", oid(A));
 
-		// Present, but at a different commit: not a match. Only the row that
-		// put the branch in the plan is the planned one.
 		assert_true(plan.contains("feature", oid(A)));
 		assert_false(plan.contains("feature", oid(B)));
 		assert_false(plan.contains("main", oid(A)));
@@ -201,8 +187,6 @@ private static void test_set_target_keeps_other_branches()
 		plan.toggle("main", oid(B));
 		assert_cmpint(plan.size, CompareOperator.EQ, 2);
 
-		// A keyboard select sets the landed row's branch, leaving the others in
-		// the plan: arrow travel is like a click on that row, not a wipe.
 		plan.set_target("feature", oid(C));
 
 		assert_cmpint(plan.size, CompareOperator.EQ, 2);
@@ -221,9 +205,6 @@ private static void test_set_target_same_row_keeps_it()
 	{
 		var plan = new Gitrlz.ResetPlan();
 
-		// Unlike a toggle, selecting the same branch and commit twice keeps it
-		// in the plan rather than removing it: keyboard travel selects, it
-		// never deselects.
 		plan.set_target("feature", oid(A));
 		plan.set_target("feature", oid(A));
 
@@ -246,8 +227,6 @@ private static void test_set_only_replaces_the_whole_plan()
 		plan.toggle("main", oid(B));
 		assert_cmpint(plan.size, CompareOperator.EQ, 2);
 
-		// The HEAD view's plain selection: one row drops every other branch and
-		// keeps only the chosen one, unlike set_target which keeps the others.
 		plan.set_only("main", oid(C));
 
 		assert_cmpint(plan.size, CompareOperator.EQ, 1);
@@ -270,14 +249,10 @@ private static void test_set_only_or_clear_selects_then_deselects()
 		plan.toggle("main", oid(B));
 		assert_cmpint(plan.size, CompareOperator.EQ, 2);
 
-		// The HEAD view's plain click: the row becomes the sole selection,
-		// dropping the others, exactly like set_only.
 		plan.set_only_or_clear("main", oid(C));
 		assert_cmpint(plan.size, CompareOperator.EQ, 1);
 		assert_true(plan.contains("main", oid(C)));
 
-		// Clicking the same row again clears it: the plan empties. This is the
-		// deselect that set_only alone does not do.
 		plan.set_only_or_clear("main", oid(C));
 		assert_cmpint(plan.size, CompareOperator.EQ, 0);
 	}
@@ -307,5 +282,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

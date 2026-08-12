@@ -17,26 +17,6 @@
 namespace Gitrlz
 {
 
-/**
- * The Branch chip in the reflog list (spec P-FR-16, FR-123).
- *
- * A filled round pill in the colour of the branch, with light text. It agrees
- * with the ref pills that the graph of gitg draws. Thus a branch looks the
- * same in the two panes.
- *
- * Gitg.LabelRenderer draws those pills, but this class does not use it. Its
- * draw() takes a SList<Gitg.Ref>, and the chip must render branches that no
- * longer exist as refs. A reflog stays after the branch that it describes,
- * and the name of a deleted branch is important data. Thus this class
- * reproduces the geometry.
- *
- * The Python implementation measured the geometry from gitg at magnification
- * and recorded it in P-FR-21. The corners have a 4 px radius, read from the
- * pixel profile of the corner. That profile is an inset sequence of
- * 4, 2, 1, 1, 0, which a 4 px circle produces. The text is at approximately
- * 83 per cent of the body size, at normal weight and not bold. There is no
- * border.
- */
 public class CellRendererBranch : Gtk.CellRenderer
 {
 	private const double RADIUS = 4.0;
@@ -46,7 +26,6 @@ public class CellRendererBranch : Gtk.CellRenderer
 
 	public string branch { get; set; default = ""; }
 
-	/** Palette slot, or -1 when the branch is unknown. */
 	public int colour_index { get; set; default = -1; }
 
 	private Pango.Layout create_layout(Gtk.Widget widget)
@@ -111,9 +90,6 @@ public class CellRendererBranch : Gtk.CellRenderer
 	                            Gdk.Rectangle cell_area,
 	                            Gtk.CellRendererState flags)
 	{
-		// If the branch of an entry is unknown, the cell stays empty
-		// (P-FR-16). This includes an entry from a period with a detached
-		// HEAD.
 		if (branch == null || branch == "" || colour_index < 0)
 		{
 			return;
@@ -128,13 +104,8 @@ public class CellRendererBranch : Gtk.CellRenderer
 		var pill_width = w + PADDING_X * 2;
 		var pill_height = double.max(h + 2, cell_area.height - MARGIN_Y * 2);
 
-		// Left-justified against the leading edge of the cell. Thus the
-		// names make a straight column.
 		var x = (double)cell_area.x;
 
-		// On a whole pixel, as the labels of gitg are. A fractional origin
-		// spreads the top and the bottom edge of the fill over two rows of
-		// pixels and leaves them grey.
 		var y = Math.floor(cell_area.y + (cell_area.height - pill_height) / 2.0);
 
 		var colour = Gitg.Color.from_index(colour_index);
@@ -145,12 +116,6 @@ public class CellRendererBranch : Gtk.CellRenderer
 		cr.set_source_rgb(colour.r, colour.g, colour.b);
 		cr.fill();
 
-		// Light text, as the labels of gitg have. No border: a measurement
-		// against gitg shows that its labels have none.
-		//
-		// One pixel above the centre, which is where gitg puts the text of a
-		// label. Words sit low in their line box, thus a true centre reads as
-		// too low, and the lift corrects it.
 		cr.set_source_rgb(1.0, 1.0, 1.0);
 		cr.move_to(x + PADDING_X, y + (pill_height - h) / 2.0 - 1);
 		Pango.cairo_show_layout(cr, layout);
@@ -160,5 +125,3 @@ public class CellRendererBranch : Gtk.CellRenderer
 }
 
 }
-
-// ex:set ts=4 noet:

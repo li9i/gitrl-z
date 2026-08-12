@@ -1,10 +1,3 @@
-# gitrl-z's own code. Namespace Gitrlz; vendored gitg code keeps Gitg/GitgExt
-# (spec NFR-5).
-#
-# Everything except main() builds into a static library, for the same reason
-# the vendored subtree does: the UI tests construct the real widgets, and they
-# can only link a library, not an executable.
-
 gitrlz_lib_sources = files(
   'gitrlz-application.vala',
   'gitrlz-branch-colours.vala',
@@ -42,13 +35,6 @@ gitrlz_deps = [
   hdy_dep,
 ]
 
-# Meson adds a linked Vala library's generated .vapi automatically, so naming
-# it again with --pkg would make valac warn about a duplicate source. Only the
-# extra vapis need declaring.
-#
-# --gresources lets valac resolve the [GtkTemplate] paths at compile time, so a
-# typo in a template path or a missing [GtkChild] is a build error rather than
-# a runtime one.
 gitrlz_vala_flags = vala_flags + [
   '--pkg', 'gitrlz-config',
   '--pkg', 'gsettings-desktop-schemas',
@@ -56,8 +42,6 @@ gitrlz_vala_flags = vala_flags + [
   '--gresourcesdir', join_paths(meson.current_source_dir(), 'resources'),
 ]
 
-# Resources are compiled into the final binaries, not into this library —
-# see the note in src/vendor-gitg/meson.build.
 libgitrlz = static_library(
   'gitrlz',
   gitrlz_lib_sources,
@@ -76,11 +60,8 @@ gitrlz_dep = declare_dependency(
   dependencies: gitrlz_deps,
 )
 
-# Every binary that shows a widget needs both resource bundles compiled in.
 gitrlz_all_resources = gitrlz_resources + vendor_gitg_resources
 
-# Named, because the tests spawn the real binary rather than a stand-in
-# (see tests/unit/test-cli.vala).
 gitrlz_exe = executable(
   gitrlz_binary,
   files('gitrlz-main.vala') + gitrlz_all_resources,

@@ -14,16 +14,6 @@
  * details.
  */
 
-/*
- * Reflog list annotations: operations and branch attribution.
- *
- * A case-for-case port of the Python implementation's
- * tests/test_annotations.py, which is the specification of this behaviour.
- * Most cases are built from literal message lists; the last
- * reads a real repository so the literals stay honest about what git
- * actually writes (IC-8).
- */
-
 namespace GitrlzTest
 {
 
@@ -36,9 +26,6 @@ private const string[] REBASE_RUN = {
 	"checkout: moving from main to side"
 };
 
-/**
- * A ReflogEntry carrying only the field these functions read.
- */
 private static Gee.List<Gitrlz.ReflogEntry> entries_for(string[] messages)
 {
 	var entries = new Gee.ArrayList<Gitrlz.ReflogEntry>();
@@ -122,7 +109,6 @@ private static void test_classify_marks_a_rebase_run()
 
 private static void test_classify_rebase_without_a_finish()
 {
-	// An abandoned rebase closes at its last rebase row.
 	var ops = Gitrlz.ReflogAnnotations.classify_operations(entries_for({
 		"checkout: moving from side to main",
 		"rebase (pick): first pick",
@@ -157,7 +143,6 @@ private static void test_classify_keeps_two_runs_separate()
 
 private static void test_classify_lone_start_stays_single()
 {
-	// A bracket needs at least two rows to bracket.
 	var ops = Gitrlz.ReflogAnnotations.classify_operations(
 		entries_for({"rebase (start): checkout main"}));
 
@@ -188,7 +173,6 @@ private static void test_attribute_follows_checkouts()
 
 private static void test_attribute_backfills_before_the_first_checkout()
 {
-	// Entries older than the first checkout take its from branch.
 	var branches = Gitrlz.ReflogAnnotations.attribute_branches(entries_for({
 		"checkout: moving from main to side",
 		"commit: second",
@@ -221,8 +205,6 @@ private static void test_attribute_detached_head_gives_null()
 
 private static void test_attribute_credits_a_rebase_run_to_its_branch()
 {
-	// A rebase replays with HEAD detached, so without this every row of the
-	// run would read as detached rather than as work on the branch.
 	var branches = Gitrlz.ReflogAnnotations.attribute_branches(entries_for(REBASE_RUN));
 
 	assert_branches(branches, {"main", "side", "side", "side", "side", "side"});
@@ -238,17 +220,12 @@ private static void test_attribute_empty()
 
 private static void test_against_a_real_reflog()
 {
-	// The literals above claim to be what git writes. This is what keeps
-	// that claim honest, and it is now doubly worth having: the messages
-	// arrive from libgit2 rather than from git's own output, so it also
-	// confirms Ggit reports them unchanged (IC-103).
 	try
 	{
 		var repo = Repo.create();
 
 		repo.commit("base");
 		repo.git({"checkout", "--quiet", "-b", "side"});
-		// Distinct files so the rebase replays without a conflict.
 		repo.commit("side work", "side.txt");
 		repo.checkout("main");
 		repo.commit("main work", "main.txt");
@@ -290,10 +267,8 @@ private static void test_against_a_real_reflog()
 		var branches = Gitrlz.ReflogAnnotations.attribute_branches(entries);
 		assert_cmpint(branches.length, CompareOperator.EQ, entries.size);
 
-		// The newest entry is the checkout back onto main.
 		assert_cmpstr(branches[0], CompareOperator.EQ, "main");
 
-		// Every row of the rebase run is credited to the branch it returns to.
 		for (var i = 0; i < ops.length; i++)
 		{
 			if (ops[i].position != Gitrlz.OperationPosition.SINGLE)
@@ -312,10 +287,6 @@ private static void test_against_a_real_reflog()
 
 private static void test_describe_distinguishes_branch_forms()
 {
-	// IC-8's kind is the first word before the colon, and two distinct
-	// operations share `branch`. Describing a moved branch as "Branch
-	// created" is wrong, and anything recommending `git branch -f` would
-	// make that common.
 	assert_cmpstr(
 		Gitrlz.CellRendererOperations.describe(
 			"branch", Gitrlz.OperationPosition.SINGLE, "branch: Created from main"),
@@ -327,8 +298,6 @@ private static void test_describe_distinguishes_branch_forms()
 			"branch: Reset to 7c63e9f065a205331ea5522176b102fa42706a9f"),
 		CompareOperator.EQ, "Branch moved");
 
-	// The commit variants, distinguished for the same reason: an amend
-	// rewrites the previous commit rather than adding one.
 	assert_cmpstr(
 		Gitrlz.CellRendererOperations.describe(
 			"commit", Gitrlz.OperationPosition.SINGLE, "commit: add parser"),
@@ -347,9 +316,6 @@ private static void test_describe_distinguishes_branch_forms()
 
 private static void test_branch_force_message_form_is_real()
 {
-	// The literals above claim to be what git writes. Nothing in gitrl-z
-	// generates a `git branch -f` today, so without this the test would be
-	// asserting against my memory of git's output rather than git's output.
 	try
 	{
 		var repo = Repo.create();
@@ -358,8 +324,6 @@ private static void test_branch_force_message_form_is_real()
 		repo.commit("second");
 		repo.branch("side");
 
-		// Move a branch that is not checked out. `git branch -f` refuses the
-		// current one, which is why `side` is used here.
 		repo.git({"branch", "-f", "side", first});
 
 		var location = Gitrlz.Application.discover_repository(repo.path);
@@ -370,7 +334,6 @@ private static void test_branch_force_message_form_is_real()
 
 		assert_cmpint(entries.size, CompareOperator.GT, 0);
 
-		// Newest first: the force-move is entry 0.
 		var moved = entries[0];
 
 		assert_cmpstr(Gitrlz.ReflogAnnotations.operation_kind(moved.message),
@@ -382,7 +345,6 @@ private static void test_branch_force_message_form_is_real()
 				"branch", Gitrlz.OperationPosition.SINGLE, moved.message),
 			CompareOperator.EQ, "Branch moved");
 
-		// And the creation entry below it still reads as a creation.
 		var created = entries[entries.size - 1];
 		assert_true(created.message.contains("Created from"));
 
@@ -423,5 +385,3 @@ public static int main(string[] args)
 }
 
 }
-
-// ex:set ts=4 noet:

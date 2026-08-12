@@ -17,31 +17,6 @@
 namespace Gitrlz
 {
 
-/**
- * Follows a repository while it changes (spec FR-130, FR-131, P-FR-25).
- *
- * This class monitors the git directory, and also its `logs`,
- * `logs/refs/heads` and `refs/heads` subdirectories. Together these cover
- * each condition that can make the display stale: HEAD and packed-refs in the
- * git directory, the reflogs, and the branch tips.
- *
- * It monitors only the git directory, and never the working tree. Thus a
- * change to a file has no effect until git records it.
- *
- * A directory that does not exist, such as `logs` in a repository with no
- * commits, has no monitor. The next reload finds it. It is not lost for the
- * full life of the process.
- *
- * Debounce: one git command changes several files, and a rebase changes many
- * more. A change schedules the reload 400 ms later, and each subsequent
- * change delays it again. Thus the window reloads one time for each
- * operation, and not one time for each file.
- *
- * gitg has a Gitg.RecursiveMonitor for this. But it is in the application
- * sources of gitg and not in libgitg, thus it is not in the vendored closure.
- * Four known directories need less code than that class and a recursion
- * through a full .git.
- */
 public class Monitor : Object
 {
 	private const uint DEBOUNCE_MS = 400;
@@ -49,7 +24,6 @@ public class Monitor : Object
 	private Gee.List<FileMonitor> d_monitors;
 	private uint d_timeout;
 
-	/** Emitted one time for each group of changes, after the changes stop. */
 	public signal void changed();
 
 	public bool enabled { get; set; default = true; }
@@ -80,10 +54,6 @@ public class Monitor : Object
 		d_monitors.clear();
 	}
 
-	/**
-	 * Monitors the git directory of a repository. Replaces any previous
-	 * monitor.
-	 */
 	public void watch(File? git_dir)
 	{
 		stop();
@@ -114,9 +84,6 @@ public class Monitor : Object
 		}
 		catch (Error e)
 		{
-			// If a directory cannot have a monitor, the user reloads
-			// manually. Nothing stops. F5 and the menu entry continue to
-			// operate (FR-131).
 			warning("could not watch %s: %s", directory.get_path(), e.message);
 		}
 	}
@@ -142,5 +109,3 @@ public class Monitor : Object
 }
 
 }
-
-// ex:set ts=4 noet:
