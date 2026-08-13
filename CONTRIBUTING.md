@@ -33,6 +33,16 @@ ninja -C _build
 
 The `ui` suite drives real widgets in Xvfb. The `visual` suite compares the lane geometry with the installed gitg. It is off by default (`-Dvisual_tests=true`), because it needs an X server and gitg.
 
+## The animation in the README
+
+```bash
+./scripts/capture-demo.sh
+```
+
+It builds a throwaway repository at `~/parser`, drives the built binary in Xvfb, and writes `docs/screenshots/demo-one-branch.gif`. The repository is removed afterwards. `scripts/demo-fixture.sh` builds that repository on its own if you want to open it by hand.
+
+Rerun it whenever a change alters what the panes draw, so the animation does not promise behaviour the program no longer has.
+
 ## Packaging
 
 ```bash
