@@ -307,11 +307,26 @@ public class ReflogList : Object
 	                     ResetPlan? plan,
 	                     string? view_branch,
 	                     int start_index,
-	                     Gee.Map<string, string>? rewritten = null)
+	                     Gee.Map<string, string>? rewritten = null,
+	                     bool branch_from_ref = false)
 	{
 		d_entries = entries;
 		d_operations = ReflogAnnotations.classify_operations(entries);
-		d_branches = ReflogAnnotations.attribute_branches(entries, current_branch, rewritten);
+		if (branch_from_ref)
+		{
+			var names = new string?[entries.size];
+
+			for (var i = 0; i < entries.size; i++)
+			{
+				names[i] = entries[i].ref_name;
+			}
+
+			d_branches = names;
+		}
+		else
+		{
+			d_branches = ReflogAnnotations.attribute_branches(entries, current_branch, rewritten);
+		}
 		d_colours = colours;
 		d_plan = plan;
 		d_view_branch = view_branch;

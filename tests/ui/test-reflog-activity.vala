@@ -72,6 +72,59 @@ private static Repo braided_repo() throws Error
 	return repo;
 }
 
+private static string reflog_snapshot(Repo repo) throws Error
+{
+	var lines = new Gee.ArrayList<string>();
+
+	collect_reflogs(repo.path.get_child(".git").get_child("logs"), lines);
+	lines.sort();
+
+	return string.joinv("\n", lines.to_array());
+}
+
+private static void collect_reflogs(File dir, Gee.List<string> lines)
+{
+	try
+	{
+		var children = dir.enumerate_children(FileAttribute.STANDARD_NAME + "," +
+		                                      FileAttribute.STANDARD_TYPE, 0);
+
+		FileInfo? info;
+
+		while ((info = children.next_file()) != null)
+		{
+			var child = dir.get_child(info.get_name());
+
+			if (info.get_file_type() == FileType.DIRECTORY)
+			{
+				collect_reflogs(child, lines);
+				continue;
+			}
+
+			uint8[] contents;
+			child.load_contents(null, out contents, null);
+
+			lines.add("%s %s".printf(
+				child.get_path(),
+				Checksum.compute_for_data(ChecksumType.SHA1, contents)));
+		}
+	}
+	catch (Error e)
+	{
+	}
+}
+
+private static Repo dated_repo() throws Error
+{
+	var repo = Repo.create();
+
+	repo.commit_at(1, "first");
+	repo.commit_at(2, "second");
+	repo.branch("later");
+
+	return repo;
+}
+
 private static void test_refs_panel_contents()
 {
 	try
@@ -81,7 +134,8 @@ private static void test_refs_panel_contents()
 
 		var ids = paned.ref_ids();
 
-		assert_cmpstr(ids[0], CompareOperator.EQ, "all");
+		assert_cmpstr(ids[0], CompareOperator.EQ, "rewind");
+		assert_cmpstr(ids[1], CompareOperator.EQ, "all");
 		assert_true(ids.contains("feature"));
 		assert_true(ids.contains("main"));
 		assert_false(ids.contains("stash"));
@@ -612,6 +666,235 @@ private static void test_search_takes_the_mark_off_screen_with_its_row()
 	{
 		Test.fail_printf("fixture failed: %s", e.message);
 	}
+}
+
+private static void test_rewind_opens_on_the_current_state()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+
+		assert_cmpint(paned.rewind_state_count, CompareOperator.EQ, 3);
+		assert_cmpint(paned.rewind_position, CompareOperator.EQ, 2);
+		assert_cmpstr(paned.command, CompareOperator.EQ, "");
+		assert_cmpstr(paned.rewind_summary, CompareOperator.EQ, "");
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_rewind_moves_the_checked_out_branch_back()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+		paned.set_rewind_position(0);
+
+		assert_true(paned.command.contains("git reset --hard"));
+		assert_true(paned.command.contains("\n"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_rewind_removes_a_branch_born_later()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+		paned.set_rewind_position(0);
+
+		assert_true(paned.command.contains("git branch -D later"));
+		assert_true(paned.rewind_summary.contains("1 branch is removed"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_rewind_keeps_a_branch_already_in_place()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+		paned.set_rewind_position(paned.rewind_state_count - 1);
+
+		assert_cmpstr(paned.command, CompareOperator.EQ, "");
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_rewind_off_clears_the_plan()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+		paned.set_rewind_position(0);
+
+		assert_true(paned.command != "");
+
+		paned.set_rewind_visible(false);
+
+		assert_cmpstr(paned.command, CompareOperator.EQ, "");
+		assert_cmpint(paned.rewind_position, CompareOperator.EQ, -1);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_rewind_entry_snaps_to_the_state_in_force()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+		paned.set_rewind_position(paned.rewind_state_count - 1);
+
+		var first = paned.rewind_moment;
+
+		paned.set_rewind_position(0);
+
+		var oldest = paned.rewind_moment;
+
+		paned.enter_rewind_moment(first);
+		assert_cmpstr(paned.rewind_moment, CompareOperator.EQ, first);
+
+		paned.enter_rewind_moment(oldest);
+		assert_cmpstr(paned.rewind_moment, CompareOperator.EQ, oldest);
+		assert_cmpint(paned.rewind_position, CompareOperator.EQ, 0);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_rewind_entry_ignores_nonsense()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+		paned.set_rewind_position(0);
+
+		var moment = paned.rewind_moment;
+
+		paned.enter_rewind_moment("not a date");
+
+		assert_cmpstr(paned.rewind_moment, CompareOperator.EQ, moment);
+		assert_cmpint(paned.rewind_position, CompareOperator.EQ, 0);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_entry_limit_shortens_the_dial()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+
+		assert_cmpint(paned.rewind_state_count, CompareOperator.EQ, 3);
+
+		paned.set_entries_text("Last 2");
+
+		assert_cmpint(paned.rewind_state_count, CompareOperator.EQ, 2);
+
+		paned.set_entries_text("All");
+
+		assert_cmpint(paned.rewind_state_count, CompareOperator.EQ, 3);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_time_window_empties_the_dial()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+		paned.set_rewind_position(0);
+
+		assert_true(paned.command != "");
+
+		paned.choose_time_window(2);
+
+		assert_cmpint(paned.rewind_state_count, CompareOperator.EQ, 0);
+		assert_cmpstr(paned.command, CompareOperator.EQ, "");
+		assert_cmpstr(paned.rewind_moment, CompareOperator.EQ, "");
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_rewind_writes_nothing()
+{
+	try
+	{
+		var repo = dated_repo();
+		var refs_before = repo.git({"for-each-ref", "--format=%(refname) %(objectname)"});
+		var logs_before = reflog_snapshot(repo);
+
+		var paned = activity_for(repo);
+
+		paned.set_rewind_visible(true);
+
+		for (var i = 0; i < paned.rewind_state_count; i++)
+		{
+			paned.set_rewind_position(i);
+		}
+
+		paned.set_rewind_visible(false);
+
+		assert_cmpstr(repo.git({"for-each-ref", "--format=%(refname) %(objectname)"}),
+		              CompareOperator.EQ, refs_before);
+		assert_cmpstr(reflog_snapshot(repo), CompareOperator.EQ, logs_before);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
 
 private static void test_preview_writes_nothing()
@@ -1750,6 +2033,16 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/head-view-arrow-never-deselects", test_head_view_arrow_travel_never_deselects);
 	Test.add_func("/gitrlz/activity/detached-head-offers-way-back", test_detached_head_offers_the_way_back);
 	Test.add_func("/gitrlz/activity/preview-moves-branch-drops-rest", test_preview_moves_the_branch_and_drops_what_it_leaves);
+	Test.add_func("/gitrlz/activity/rewind-opens-on-now", test_rewind_opens_on_the_current_state);
+	Test.add_func("/gitrlz/activity/rewind-moves-checked-out", test_rewind_moves_the_checked_out_branch_back);
+	Test.add_func("/gitrlz/activity/rewind-removes-later-branch", test_rewind_removes_a_branch_born_later);
+	Test.add_func("/gitrlz/activity/rewind-keeps-branch-in-place", test_rewind_keeps_a_branch_already_in_place);
+	Test.add_func("/gitrlz/activity/rewind-off-clears", test_rewind_off_clears_the_plan);
+	Test.add_func("/gitrlz/activity/rewind-entry-snaps", test_rewind_entry_snaps_to_the_state_in_force);
+	Test.add_func("/gitrlz/activity/rewind-entry-nonsense", test_rewind_entry_ignores_nonsense);
+	Test.add_func("/gitrlz/activity/rewind-entry-limit", test_entry_limit_shortens_the_dial);
+	Test.add_func("/gitrlz/activity/rewind-time-window", test_time_window_empties_the_dial);
+	Test.add_func("/gitrlz/activity/rewind-writes-nothing", test_rewind_writes_nothing);
 	Test.add_func("/gitrlz/activity/preview-writes-nothing", test_preview_writes_nothing);
 	Test.add_func("/gitrlz/activity/graph-pills-follow-ref-change", test_graph_pills_follow_a_ref_change_outside_the_window);
 	Test.add_func("/gitrlz/activity/graph-keeps-start-commit", test_graph_keeps_the_commit_the_session_started_on);

@@ -34,6 +34,11 @@ public class ResetPreview : Object
 
 		foreach (var entry in tips.entries)
 		{
+			if (plan.is_deleted(entry.key))
+			{
+				continue;
+			}
+
 			var moved = plan.target_for(entry.key);
 			var id = moved != null ? moved : entry.value;
 
@@ -112,12 +117,32 @@ public class ResetPreview : Object
 			}
 		}
 
+		foreach (var branch in plan.deletions())
+		{
+			if (branch == current_branch || !existing.contains(branch))
+			{
+				continue;
+			}
+
+			lines += "git branch -D %s".printf(branch);
+		}
+
 		if (reset_line != null)
 		{
 			lines += reset_line;
 		}
 
-		return string.joinv("; ", lines);
+		return string.joinv("\n", lines);
+	}
+
+	public static string? undeletable_branch(ResetPlan plan, string? current_branch)
+	{
+		if (current_branch == null)
+		{
+			return null;
+		}
+
+		return plan.is_deleted(current_branch) ? current_branch : null;
 	}
 }
 

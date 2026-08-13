@@ -1,1 +1,13 @@
+src/gitrlz/gitrlz-application.vala
+src/gitrlz/gitrlz-cell-renderer-operations.vala
+src/gitrlz/gitrlz-dash-view.vala
+src/gitrlz/gitrlz-diff-window.vala
 src/gitrlz/gitrlz-main.vala
+src/gitrlz/gitrlz-preferences-dialog.vala
+src/gitrlz/gitrlz-reflog-activity.vala
+src/gitrlz/gitrlz-reflog-list.vala
+src/gitrlz/gitrlz-rewind-window.vala
+src/gitrlz/gitrlz-window.vala
+src/gitrlz/resources/ui/gitrlz-menus.ui
+src/gitrlz/resources/ui/gitrlz-reflog-paned.ui
+src/gitrlz/resources/ui/gitrlz-window.ui

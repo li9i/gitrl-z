@@ -318,6 +318,32 @@ private static void test_read_of_an_unborn_head_stores_nothing()
 	}
 }
 
+private static void test_boundary_marks_the_newest_entry_from_before()
+{
+	try
+	{
+		var repo = Repo.create();
+		repo.commit_at(1, "first");
+
+		var repository = open_fixture(repo);
+		var branches = Gitrlz.Repository.list_branches(repository);
+		var start = Gitrlz.SessionStart.read(repository, branches, false);
+
+		var before = Gitrlz.Reflog.read_all(repository, branches);
+
+		assert_cmpint(start.boundary_in(before), CompareOperator.EQ, 0);
+
+		repo.commit_at(2, "second");
+
+		var after = Gitrlz.Reflog.read_all(open_fixture(repo), branches);
+
+		assert_cmpint(start.boundary_in(after), CompareOperator.EQ, 1);
+
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
 public static int main(string[] args)
 {
 	Test.init(ref args);
@@ -332,6 +358,8 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/session-start/read-each-ref", test_read_stores_the_newest_entry_of_each_ref);
 	Test.add_func("/gitrlz/session-start/read-no-stash", test_read_stores_nothing_for_an_absent_stash);
 	Test.add_func("/gitrlz/session-start/read-unborn-head", test_read_of_an_unborn_head_stores_nothing);
+
+	Test.add_func("/gitrlz/session-start/boundary", test_boundary_marks_the_newest_entry_from_before);
 
 	return Test.run();
 }

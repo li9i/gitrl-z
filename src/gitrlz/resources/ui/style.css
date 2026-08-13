@@ -154,6 +154,14 @@ GitgHistoryRefRow {
 	color: #2c5c17;
 }
 
+.gitrlz-summary {
+	background-color: #fcf3d0;
+}
+
+.gitrlz-summary label {
+	color: #6b5000;
+}
+
 .gitrlz-warning {
 	background-color: #f8d7da;
 }
@@ -167,3 +175,24 @@ GitgHistoryRefRow {
 	font-size: 0.9em;
 	color: @insensitive_fg_color;
 }
+
+.gitrlz-command-text {
+	font-family: monospace;
+}
+
+.gitrlz-removal {
+	color: #6e1b21;
+	font-weight: bold;
+}
+
+.gitrlz-dialog decoration {
+	border: 1px solid @borders;
+	border-radius: 8px;
+}
+
+.gitrlz-dial marks mark indicator {
+	background-color: @aluminium4;
+	min-width: 1px;
+	min-height: 6px;
+}
+

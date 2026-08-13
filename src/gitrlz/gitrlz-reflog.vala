@@ -161,6 +161,28 @@ public class Reflog : Object
 		return entries;
 	}
 
+	public static Gee.List<ReflogEntry> read_all(Gitg.Repository repository,
+	                                            Gee.List<string> branches)
+	{
+		var merged = new Gee.ArrayList<ReflogEntry>();
+
+		foreach (var branch in branches)
+		{
+			merged.add_all(read(repository, branch));
+		}
+
+		merged.sort((a, b) => {
+			if (a.date == null || b.date == null)
+			{
+				return 0;
+			}
+
+			return -a.date.compare(b.date);
+		});
+
+		return merged;
+	}
+
 	public static Gee.Map<string, string> rewritten_tips(Gitg.Repository repository,
 	                                                     Gee.List<string> branches)
 	{

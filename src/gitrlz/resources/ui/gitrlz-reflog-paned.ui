@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="3.20"/>
+
+  <object class="GtkAdjustment" id="d_rewind_adjustment">
+    <property name="lower">0</property>
+    <property name="upper">0</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">1</property>
+  </object>
+
   <template class="GitrlzReflogPaned" parent="GtkPaned">
     <property name="visible">True</property>
     <property name="can_focus">True</property>
@@ -282,6 +290,62 @@
             <property name="fill">True</property>
           </packing>
         </child>
+
+        <child>
+          <object class="GtkBox" id="d_summary">
+            <property name="visible">False</property>
+            <property name="no_show_all">True</property>
+            <property name="can_focus">False</property>
+            <property name="spacing">6</property>
+            <property name="margin">8</property>
+            <style>
+              <class name="gitrlz-summary"/>
+            </style>
+            <child>
+              <object class="GtkLabel" id="d_summary_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="hexpand">True</property>
+                <property name="xalign">0</property>
+                <property name="wrap">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="d_summary_open">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Show the commands this rewind needs and the branches they affect</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="spacing">5</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="visible">True</property>
+                        <property name="icon_name">view-list-symbolic</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">Show what to run</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
           </object>
           <packing>
             <property name="resize">True</property>
@@ -294,6 +358,95 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
+
+            <child>
+              <object class="GtkBox" id="d_rewind">
+                <property name="visible">False</property>
+                <property name="no_show_all">True</property>
+                <property name="can_focus">False</property>
+                <property name="spacing">10</property>
+                <property name="margin_start">8</property>
+                <property name="margin_end">8</property>
+                <property name="margin_top">6</property>
+                <property name="margin_bottom">2</property>
+                <child>
+                  <object class="GtkButton" id="d_rewind_back">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="valign">start</property>
+                    <property name="tooltip_text" translatable="yes">One state earlier</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="visible">True</property>
+                        <property name="icon_name">go-previous-symbolic</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkScale" id="d_rewind_scale">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="valign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="draw_value">False</property>
+                    <property name="has_origin">True</property>
+                    <property name="round_digits">0</property>
+                    <property name="digits">0</property>
+                    <property name="adjustment">d_rewind_adjustment</property>
+                    <style>
+                      <class name="gitrlz-dial"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="d_rewind_forward">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="valign">start</property>
+                    <property name="tooltip_text" translatable="yes">One state later</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="visible">True</property>
+                        <property name="icon_name">go-next-symbolic</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="d_rewind_entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="valign">start</property>
+                    <property name="width_chars">19</property>
+                    <property name="max_width_chars">19</property>
+                    <property name="tooltip_text" translatable="yes">Type a date and time to rewind to</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+              </packing>
+            </child>
 
             <child>
               <object class="GtkLabel" id="d_graph_caption">

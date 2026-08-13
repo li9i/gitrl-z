@@ -16,8 +16,10 @@ gitrlz_lib_sources = files(
   'gitrlz-reflog-filter.vala',
   'gitrlz-reflog.vala',
   'gitrlz-repository.vala',
+  'gitrlz-rewind-window.vala',
   'gitrlz-session-start.vala',
   'gitrlz-synthetic-ref.vala',
+  'gitrlz-timeline.vala',
   'gitrlz-window.vala',
   'gitrlz-word-diff.vala',
 )

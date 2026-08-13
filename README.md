@@ -21,6 +21,7 @@ Open `gitrl-z` after any of these and the reflog shows you what happened. Click 
 - **You deleted a branch and you want it again.** `gitrl-z` finds the last position of the branch, and offers to make the branch again at that position. Thus `git branch -D` is not permanent.
 - **You are in a detached HEAD and you do not know why.** `gitrl-z` shows the position of HEAD related to the branches, and offers to attach it again.
 - **You will do a reset and you want to be sure.** Select any reflog entry. `gitrl-z` draws the resulting history first, so you know the destination before you do the reset.
+- **The whole repository was in a better state an hour ago.** The rewind button in the header bar opens a dial above the graph. Each stop on it is a moment the repository actually passed through, taken from the reflogs of every local branch, and moving the dial puts every branch back where it stood at that moment. The graph redraws at each stop. Branches that did not exist yet are listed as removed, and the command that gets you there goes to the clipboard when you ask for it.
 
 ## Installation
 

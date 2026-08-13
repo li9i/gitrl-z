@@ -66,6 +66,24 @@ public class ReflogPaned : Gtk.Paned
 	private unowned Gtk.Label d_banner_label;
 	[GtkChild]
 	private unowned Gtk.Button d_banner_copy;
+	[GtkChild]
+	private unowned Gtk.Box d_rewind;
+	[GtkChild]
+	private unowned Gtk.Button d_rewind_back;
+	[GtkChild]
+	private unowned Gtk.Button d_rewind_forward;
+	[GtkChild]
+	private unowned Gtk.Entry d_rewind_entry;
+	[GtkChild]
+	private unowned Gtk.Scale d_rewind_scale;
+	[GtkChild]
+	private unowned Gtk.Adjustment d_rewind_adjustment;
+	[GtkChild]
+	private unowned Gtk.Box d_summary;
+	[GtkChild]
+	private unowned Gtk.Label d_summary_label;
+	[GtkChild]
+	private unowned Gtk.Button d_summary_open;
 
 	private Gitg.Repository? d_repository;
 	private ReflogList d_list;
@@ -108,7 +126,17 @@ public class ReflogPaned : Gtk.Paned
 
 	private uint d_uncommitted = 0;
 
+	private bool d_rewinding = false;
+
+	private Gee.List<TimelineState> d_states;
+
 	private const int BANNER_MARGIN = 8;
+
+	private const int DENSE_MARK_LIMIT = 60;
+
+	private const int DIAL_LABEL_COUNT = 5;
+
+	private const string MOMENT_FORMAT = "%Y-%m-%d %H:%M:%S";
 
 	private const int GRAPH_COLUMN_PAD = 12;
 
@@ -195,6 +223,15 @@ public class ReflogPaned : Gtk.Paned
 		});
 
 		d_banner_copy.clicked.connect(copy_command);
+
+		d_states = new Gee.ArrayList<TimelineState>();
+
+		d_rewind_scale.value_changed.connect(on_rewind_value_changed);
+		d_rewind_scale.size_allocate.connect(() => { align_dial_controls(); });
+		d_rewind_entry.activate.connect(on_rewind_entry_activate);
+		d_rewind_back.clicked.connect(() => { step_rewind(-1); });
+		d_rewind_forward.clicked.connect(() => { step_rewind(1); });
+		d_summary_open.clicked.connect(show_rewind_window);
 
 		d_preview_labels = new HashTable<Ggit.OId, GLib.SList<Gitg.Ref>>(
 			Ggit.OId.hash, Ggit.OId.equal);
@@ -488,19 +525,25 @@ public class ReflogPaned : Gtk.Paned
 		}
 	}
 
-	private void on_time_window_changed()
+	private TimeWindow time_window()
 	{
-		TimeWindow window;
-
 		switch (d_time_combo.active)
 		{
-			case 1: window = TimeWindow.LAST_10_MIN; break;
-			case 2: window = TimeWindow.LAST_HOUR; break;
-			default: window = TimeWindow.ANY; break;
+			case 1: return TimeWindow.LAST_10_MIN;
+			case 2: return TimeWindow.LAST_HOUR;
+			default: return TimeWindow.ANY;
 		}
+	}
 
-		d_list.set_window(window);
+	private void on_time_window_changed()
+	{
+		d_list.set_window(time_window());
 		update_reflog_caption();
+
+		if (d_rewinding)
+		{
+			load_timeline();
+		}
 	}
 
 	private void on_entries_count_changed()
@@ -509,6 +552,11 @@ public class ReflogPaned : Gtk.Paned
 
 		d_list.set_count(ReflogFilter.parse_count(text != null ? text : ""));
 		update_reflog_caption();
+
+		if (d_rewinding)
+		{
+			load_timeline();
+		}
 	}
 
 	public void choose_time_window(int index)
@@ -545,6 +593,11 @@ public class ReflogPaned : Gtk.Paned
 
 		build_refs_list(d_view);
 		load_reflog();
+
+		if (d_rewinding)
+		{
+			load_timeline();
+		}
 	}
 
 	private void prune_plan()
@@ -585,6 +638,8 @@ public class ReflogPaned : Gtk.Paned
 			child.destroy();
 		}
 
+		add_ref_row("", _("Repository"), true);
+		add_ref_row("rewind", _("All branches"), false);
 		add_ref_row("all", _("HEAD"), false);
 		add_ref_row("", _("Branches"), true);
 
@@ -605,7 +660,8 @@ public class ReflogPaned : Gtk.Paned
 
 		var wanted = preferred;
 
-		if (wanted != "all" && wanted != "stash" && !(wanted in d_branches))
+		if (wanted != "all" && wanted != "rewind" && wanted != "stash"
+		    && !(wanted in d_branches))
 		{
 			wanted = "all";
 		}
@@ -632,7 +688,7 @@ public class ReflogPaned : Gtk.Paned
 
 			var id = row.get_data<string>("ref");
 
-			if (id == null || id == "" || id == "all" || id == "stash")
+			if (id == null || id == "" || id == "all" || id == "rewind" || id == "stash")
 			{
 				continue;
 			}
@@ -714,6 +770,7 @@ public class ReflogPaned : Gtk.Paned
 		}
 
 		d_view = id;
+		set_rewind_visible(id == "rewind");
 		load_reflog();
 	}
 
@@ -724,17 +781,28 @@ public class ReflogPaned : Gtk.Paned
 			return;
 		}
 
+		var merged = d_view == "rewind";
 		var ref_name = d_view == "all" ? "HEAD" : d_view;
-		var entries = Reflog.read(d_repository, ref_name);
 
-		var view_branch = (d_view != "all" && d_view != "stash") ? d_view : null;
+		var entries = merged
+			? Reflog.read_all(d_repository, d_branches)
+			: Reflog.read(d_repository, ref_name);
 
-		var start_index = d_session_start != null
-			? d_session_start.index_in(ref_name, entries)
-			: -1;
+		var view_branch = (d_view != "all" && d_view != "rewind" && d_view != "stash")
+			? d_view
+			: null;
 
-		d_list.populate(entries, d_current_branch, d_view == "all", d_colours, d_plan,
-		                view_branch, start_index, d_rewritten);
+		var start_index = -1;
+
+		if (d_session_start != null)
+		{
+			start_index = merged
+				? d_session_start.boundary_in(entries)
+				: d_session_start.index_in(ref_name, entries);
+		}
+
+		d_list.populate(entries, d_current_branch, d_view == "all" || merged, d_colours,
+		                d_plan, view_branch, start_index, d_rewritten, merged);
 
 		update_reflog_caption();
 
@@ -750,6 +818,10 @@ public class ReflogPaned : Gtk.Paned
 		if (d_view == "stash")
 		{
 			base_text = _("Stashed changes");
+		}
+		else if (d_view == "rewind")
+		{
+			base_text = _("Reflog for every branch");
 		}
 		else if (d_view == "all")
 		{
@@ -805,6 +877,16 @@ public class ReflogPaned : Gtk.Paned
 
 		if (entry == null || entry.new_id == null)
 		{
+			return;
+		}
+
+		if (d_rewinding)
+		{
+			if (entry.date != null)
+			{
+				seek_rewind_to(entry.date);
+			}
+
 			return;
 		}
 
@@ -1199,6 +1281,23 @@ public class ReflogPaned : Gtk.Paned
 			set_labels_without(from, branch_ref);
 			add_label(target, branch_ref);
 		}
+
+		foreach (var branch in d_plan.deletions())
+		{
+			var from = d_tips.has_key(branch) ? d_tips[branch] : null;
+
+			if (from == null)
+			{
+				continue;
+			}
+
+			var branch_ref = branch_ref_at(branch, from);
+
+			if (branch_ref != null)
+			{
+				set_labels_without(from, branch_ref);
+			}
+		}
 	}
 
 	private Gitg.Ref? branch_ref_at(string branch, Ggit.OId id)
@@ -1322,24 +1421,495 @@ public class ReflogPaned : Gtk.Paned
 			d_command = "";
 			refresh_copied();
 			d_banner.hide();
+			d_summary.hide();
 			set_warning_visible(false);
-			d_graph_caption.label = baseline_caption_text();
+			d_graph_caption.label = d_rewinding
+				? rewind_caption_text()
+				: baseline_caption_text();
 			d_graph_caption.show();
 			d_stack_preview.visible_child_name = "graph";
 			return;
 		}
 
 		d_command = ResetPreview.command_for(d_plan, d_current_branch, d_tips.keys);
-		d_banner_label.label = d_command;
 		refresh_copied();
-		d_banner.show();
 
-		update_uncommitted_warning();
+		if (d_rewinding)
+		{
+			d_banner.hide();
+			set_warning_visible(false);
+			update_summary();
+			d_summary.show();
+			d_graph_caption.label = rewind_caption_text();
+		}
+		else
+		{
+			d_summary.hide();
+			d_banner_label.label = d_command;
+			d_banner.show();
+			update_uncommitted_warning();
+			d_graph_caption.label = graph_caption_text();
+		}
 
-		d_graph_caption.label = graph_caption_text();
 		d_graph_caption.show();
 
 		d_stack_preview.visible_child_name = "graph";
+	}
+
+	public void set_rewind_visible(bool visible)
+	{
+		if (d_rewinding == visible)
+		{
+			return;
+		}
+
+		d_rewinding = visible;
+
+		if (!visible)
+		{
+			d_rewind.hide();
+			d_summary.hide();
+			d_plan.clear();
+			d_list.refresh_plan_marks();
+			refresh_ref_weights();
+			update_preview();
+			return;
+		}
+
+		load_timeline();
+
+		d_rewind.show();
+	}
+
+	public int rewind_state_count
+	{
+		get { return d_states.size; }
+	}
+
+	public int rewind_position
+	{
+		get { return d_rewinding ? (int)Math.round(d_rewind_scale.get_value()) : -1; }
+	}
+
+	public string rewind_summary
+	{
+		get { return d_summary.visible ? d_summary_label.label : ""; }
+	}
+
+	public void set_rewind_position(int index)
+	{
+		d_rewind_scale.set_value(index);
+	}
+
+	public string rewind_moment
+	{
+		get { return d_rewind_entry.text; }
+	}
+
+	public void enter_rewind_moment(string text)
+	{
+		d_rewind_entry.text = text;
+		on_rewind_entry_activate();
+	}
+
+	private void load_timeline()
+	{
+		d_states = d_repository != null
+			? within_limits(Timeline.read(d_repository, d_branches))
+			: new Gee.ArrayList<TimelineState>();
+
+		d_rewind_adjustment.lower = 0;
+		d_rewind_adjustment.upper = d_states.size > 0 ? d_states.size - 1 : 0;
+
+		add_dial_marks();
+
+		d_rewind_scale.set_value(d_rewind_adjustment.upper);
+		d_rewind.sensitive = d_states.size > 1;
+
+		if (d_states.size == 0)
+		{
+			d_plan.clear();
+			d_rewind_entry.text = "";
+			d_list.refresh_plan_marks();
+			refresh_ref_weights();
+			update_preview();
+			return;
+		}
+
+		on_rewind_value_changed();
+	}
+
+	private Gee.List<TimelineState> within_limits(Gee.List<TimelineState> states)
+	{
+		var seconds = time_window().seconds();
+		var kept = new Gee.ArrayList<TimelineState>();
+
+		DateTime? cutoff = seconds > 0
+			? new DateTime.now_local().add_seconds(-(double)seconds)
+			: null;
+
+		foreach (var state in states)
+		{
+			if (cutoff == null || state.when.compare(cutoff) >= 0)
+			{
+				kept.add(state);
+			}
+		}
+
+		var text = d_entries_combo.get_active_text();
+		var count = (int)ReflogFilter.parse_count(text != null ? text : "");
+
+		if (count > 0 && kept.size > count)
+		{
+			var trimmed = new Gee.ArrayList<TimelineState>();
+
+			for (var i = kept.size - count; i < kept.size; i++)
+			{
+				trimmed.add(kept[i]);
+			}
+
+			return trimmed;
+		}
+
+		return kept;
+	}
+
+	private void on_rewind_value_changed()
+	{
+		if (!d_rewinding || d_states.size == 0)
+		{
+			return;
+		}
+
+		var index = (int)Math.round(d_rewind_scale.get_value());
+
+		if (index < 0)
+		{
+			index = 0;
+		}
+
+		if (index >= d_states.size)
+		{
+			index = d_states.size - 1;
+		}
+
+		d_plan.adopt(Timeline.plan_for(d_states[index], d_tips));
+
+		refresh_rewind_entry();
+
+		d_list.refresh_plan_marks();
+		refresh_ref_weights();
+		update_preview();
+	}
+
+	private string rewind_caption_text()
+	{
+		return d_plan.is_empty()
+			? baseline_caption_text()
+			: _("Repository state after execution of the command");
+	}
+
+	private void align_dial_controls()
+	{
+		var trough = d_rewind_scale.get_range_rect();
+
+		if (trough.height <= 0)
+		{
+			return;
+		}
+
+		var centre = d_rewind_scale.margin_top + trough.y + trough.height / 2;
+
+		centre_on(d_rewind_back, centre);
+		centre_on(d_rewind_forward, centre);
+		centre_on(d_rewind_entry, centre);
+	}
+
+	private void centre_on(Gtk.Widget widget, int centre)
+	{
+		int minimum;
+		int natural;
+		widget.get_preferred_height(out minimum, out natural);
+
+		var margin = centre - natural / 2;
+
+		if (margin < 0)
+		{
+			margin = 0;
+		}
+
+		if (widget.margin_top != margin)
+		{
+			widget.margin_top = margin;
+		}
+	}
+
+	private void add_dial_marks()
+	{
+		d_rewind_scale.clear_marks();
+
+		if (d_states.size < 2)
+		{
+			return;
+		}
+
+		int count;
+		string format;
+		choose_signposts(out count, out format);
+
+		var signposts = signpost_indices(count);
+		var dense = d_states.size <= DENSE_MARK_LIMIT;
+
+		for (var i = 0; i < d_states.size; i++)
+		{
+			var signpost = signposts.contains(i);
+
+			if (!dense && !signpost)
+			{
+				continue;
+			}
+
+			d_rewind_scale.add_mark(i,
+			                        Gtk.PositionType.BOTTOM,
+			                        signpost ? d_states[i].when.format(format) : null);
+		}
+	}
+
+	private void choose_signposts(out int count, out string format)
+	{
+		string[] formats = { "%Y-%m-%d", "%m-%d %H:%M", "%H:%M" };
+		int[] counts = { DIAL_LABEL_COUNT, DIAL_LABEL_COUNT - 1, DIAL_LABEL_COUNT - 1 };
+
+		for (var i = 0; i < formats.length; i++)
+		{
+			if (labels_are_distinct(formats[i], counts[i]))
+			{
+				count = counts[i];
+				format = formats[i];
+				return;
+			}
+		}
+
+		count = DIAL_LABEL_COUNT - 2;
+		format = "%H:%M:%S";
+	}
+
+	private bool labels_are_distinct(string format, int count)
+	{
+		var seen = new Gee.HashSet<string>();
+
+		foreach (var index in signpost_indices(count))
+		{
+			var text = d_states[index].when.format(format);
+
+			if (seen.contains(text))
+			{
+				return false;
+			}
+
+			seen.add(text);
+		}
+
+		return true;
+	}
+
+	private Gee.Set<int> signpost_indices(int count)
+	{
+		var indices = new Gee.HashSet<int>();
+
+		if (d_states.size < 2 || count < 2)
+		{
+			return indices;
+		}
+
+		var wanted = int.min(count, d_states.size);
+
+		for (var i = 0; i < wanted; i++)
+		{
+			indices.add((d_states.size - 1) * i / (wanted - 1));
+		}
+
+		return indices;
+	}
+
+	private void on_rewind_entry_activate()
+	{
+		var when = parse_moment(d_rewind_entry.text);
+
+		if (when != null)
+		{
+			seek_rewind_to(when);
+		}
+
+		refresh_rewind_entry();
+	}
+
+	private DateTime? parse_moment(string text)
+	{
+		int year = 0;
+		int month = 0;
+		int day = 0;
+		int hour = 0;
+		int minute = 0;
+		int second = 0;
+
+		var fields = text.strip().scanf("%d-%d-%d %d:%d:%d",
+		                                out year, out month, out day,
+		                                out hour, out minute, out second);
+
+		if (fields < 3)
+		{
+			return null;
+		}
+
+		return new DateTime.local(year, month, day, hour, minute, second);
+	}
+
+	private void refresh_rewind_entry()
+	{
+		var index = (int)Math.round(d_rewind_scale.get_value());
+
+		d_rewind_entry.text = index >= 0 && index < d_states.size
+			? d_states[index].when.format(MOMENT_FORMAT)
+			: "";
+	}
+
+	private string rewind_moment_text()
+	{
+		var index = (int)Math.round(d_rewind_scale.get_value());
+
+		if (index < 0 || index >= d_states.size)
+		{
+			return "";
+		}
+
+		return d_states[index].when.format(MOMENT_FORMAT);
+	}
+
+	private int rewind_removal_count()
+	{
+		var count = 0;
+
+		foreach (var branch in d_plan.deletions())
+		{
+			if (branch != d_current_branch && d_tips.has_key(branch))
+			{
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	private string rewind_summary_text()
+	{
+		string[] parts = {};
+
+		parts += _("Back to %s").printf(rewind_moment_text());
+
+		var moves = d_plan.branches().size;
+
+		if (moves > 0)
+		{
+			parts += ngettext("%u branch moves",
+			                  "%u branches move",
+			                  moves).printf((uint)moves);
+		}
+
+		var removals = rewind_removal_count();
+
+		if (removals > 0)
+		{
+			parts += ngettext("%u branch is removed",
+			                  "%u branches are removed",
+			                  removals).printf((uint)removals);
+		}
+
+		var blocked = ResetPreview.undeletable_branch(d_plan, d_current_branch);
+
+		if (blocked != null)
+		{
+			parts += _("%s did not exist yet and cannot be removed while it is checked out").printf(blocked);
+		}
+
+		if (d_uncommitted == uint.MAX)
+		{
+			parts += _("your uncommitted changes could not be checked");
+		}
+		else if (d_uncommitted > 0)
+		{
+			parts += ngettext("%u file with uncommitted changes is discarded",
+			                  "%u files with uncommitted changes are discarded",
+			                  d_uncommitted).printf(d_uncommitted);
+		}
+
+		return string.joinv(", ", parts) + ".";
+	}
+
+	private void seek_rewind_to(DateTime when)
+	{
+		var index = 0;
+
+		for (var i = 0; i < d_states.size; i++)
+		{
+			if (d_states[i].when.compare(when) <= 0)
+			{
+				index = i;
+			}
+		}
+
+		d_rewind_scale.set_value(index);
+	}
+
+	public void show_rewind_window()
+	{
+		if (d_repository == null || d_command == "")
+		{
+			return;
+		}
+
+		var parent = get_toplevel() as Gtk.Window;
+
+		if (parent == null)
+		{
+			return;
+		}
+
+		var window = new RewindWindow(parent,
+		                              rewind_moment_text(),
+		                              d_branches,
+		                              d_tips,
+		                              d_plan,
+		                              d_current_branch,
+		                              d_command);
+		window.present();
+	}
+
+	private void step_rewind(int delta)
+	{
+		d_rewind_scale.set_value(d_rewind_scale.get_value() + delta);
+	}
+
+	private void update_summary()
+	{
+		d_uncommitted = d_repository != null && d_command.contains("reset --hard")
+			? Repository.uncommitted_changes(d_repository)
+			: 0;
+
+		d_summary_label.label = rewind_summary_text();
+
+		var context = d_summary.get_style_context();
+
+		if (rewind_removal_count() > 0 || d_uncommitted > 0)
+		{
+			context.remove_class("gitrlz-summary");
+			context.add_class("gitrlz-warning");
+		}
+		else
+		{
+			context.remove_class("gitrlz-warning");
+			context.add_class("gitrlz-summary");
+		}
 	}
 
 	private string baseline_caption_text()

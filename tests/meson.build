@@ -26,6 +26,7 @@ unit_tests = [
   'reset-preview',
   'session-start',
   'synthetic-ref',
+  'timeline',
   'word-diff',
 ]
 

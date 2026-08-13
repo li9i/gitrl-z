@@ -52,6 +52,46 @@ public class SessionStart : Object
 		return d_entries.has_key(ref_name) ? d_entries[ref_name] : null;
 	}
 
+	public int boundary_in(Gee.List<ReflogEntry> entries)
+	{
+		var when = latest_date();
+
+		if (when == null)
+		{
+			return -1;
+		}
+
+		for (var i = 0; i < entries.size; i++)
+		{
+			if (entries[i].date != null && entries[i].date.compare(when) <= 0)
+			{
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	public DateTime? latest_date()
+	{
+		DateTime? newest = null;
+
+		foreach (var entry in d_entries.values)
+		{
+			if (entry.date == null)
+			{
+				continue;
+			}
+
+			if (newest == null || entry.date.compare(newest) > 0)
+			{
+				newest = entry.date;
+			}
+		}
+
+		return newest;
+	}
+
 	public int index_in(string ref_name, Gee.List<ReflogEntry> entries)
 	{
 		return index_of(entry_for(ref_name), entries);

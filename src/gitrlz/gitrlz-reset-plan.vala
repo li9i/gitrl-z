@@ -20,20 +20,44 @@ namespace Gitrlz
 public class ResetPlan : Object
 {
 	private Gee.HashMap<string, Ggit.OId> d_targets;
+	private Gee.HashSet<string> d_deletions;
 
 	construct
 	{
 		d_targets = new Gee.HashMap<string, Ggit.OId>();
+		d_deletions = new Gee.HashSet<string>();
+	}
+
+	public void adopt(ResetPlan other)
+	{
+		d_targets.clear();
+		d_deletions.clear();
+
+		foreach (var branch in other.branches())
+		{
+			d_targets[branch] = other.target_for(branch);
+		}
+
+		foreach (var branch in other.deletions())
+		{
+			d_deletions.add(branch);
+		}
+	}
+
+	public void clear()
+	{
+		d_targets.clear();
+		d_deletions.clear();
 	}
 
 	public int size
 	{
-		get { return d_targets.size; }
+		get { return d_targets.size + d_deletions.size; }
 	}
 
 	public bool is_empty()
 	{
-		return d_targets.size == 0;
+		return d_targets.size == 0 && d_deletions.size == 0;
 	}
 
 	public Gee.List<string> branches()
@@ -43,6 +67,26 @@ public class ResetPlan : Object
 		names.sort();
 
 		return names;
+	}
+
+	public Gee.List<string> deletions()
+	{
+		var names = new Gee.ArrayList<string>();
+		names.add_all(d_deletions);
+		names.sort();
+
+		return names;
+	}
+
+	public bool is_deleted(string branch)
+	{
+		return d_deletions.contains(branch);
+	}
+
+	public void set_deleted(string branch)
+	{
+		d_targets.unset(branch);
+		d_deletions.add(branch);
 	}
 
 	public Ggit.OId? target_for(string branch)
@@ -69,12 +113,14 @@ public class ResetPlan : Object
 
 	public void set_target(string branch, Ggit.OId commit)
 	{
+		d_deletions.remove(branch);
 		d_targets[branch] = commit;
 	}
 
 	public void set_only(string branch, Ggit.OId commit)
 	{
 		d_targets.clear();
+		d_deletions.clear();
 		d_targets[branch] = commit;
 	}
 
@@ -93,6 +139,7 @@ public class ResetPlan : Object
 	public void remove(string branch)
 	{
 		d_targets.unset(branch);
+		d_deletions.remove(branch);
 	}
 
 	public void prune(Gee.List<string> present)
@@ -107,9 +154,18 @@ public class ResetPlan : Object
 			}
 		}
 
+		foreach (var branch in d_deletions)
+		{
+			if (!(branch in present))
+			{
+				doomed.add(branch);
+			}
+		}
+
 		foreach (var branch in doomed)
 		{
 			d_targets.unset(branch);
+			d_deletions.remove(branch);
 		}
 	}
 }

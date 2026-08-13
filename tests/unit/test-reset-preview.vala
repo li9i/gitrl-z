@@ -99,7 +99,8 @@ private static void test_command_reset_line_comes_last()
 
 		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "feature"})),
 		              CompareOperator.EQ,
-		              "git branch -f feature aaaaaaa; git reset --hard bbbbbbb");
+		              "git branch -f feature aaaaaaa\n" +
+		              "git reset --hard bbbbbbb");
 	}
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
@@ -115,8 +116,8 @@ private static void test_command_branch_f_lines_are_ordered()
 
 		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, null, existing({"main", "feature", "bugfix"})),
 		              CompareOperator.EQ,
-		              "git branch -f bugfix ccccccc; " +
-		              "git branch -f feature bbbbbbb; " +
+		              "git branch -f bugfix ccccccc\n" +
+		              "git branch -f feature bbbbbbb\n" +
 		              "git branch -f main aaaaaaa");
 	}
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
@@ -141,8 +142,8 @@ private static void test_command_absent_branch_is_recreated()
 		assert_cmpstr(
 			Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "feature"})),
 			CompareOperator.EQ,
-			"git branch -f feature bbbbbbb; " +
-			"git branch ghost ccccccc; " +
+			"git branch -f feature bbbbbbb\n" +
+			"git branch ghost ccccccc\n" +
 			"git reset --hard aaaaaaa");
 	}
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
@@ -313,6 +314,67 @@ private static void test_target_absent_branch_is_recoverable()
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
 
+private static void test_command_deleted_branch_uses_branch_d()
+{
+	try
+	{
+		var plan = new Gitrlz.ResetPlan();
+		plan.set_deleted("hotfix");
+
+		assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "hotfix"})),
+		              CompareOperator.EQ, "git branch -D hotfix");
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_command_deletions_come_before_the_reset()
+{
+	try
+	{
+		var plan = new Gitrlz.ResetPlan();
+		plan.toggle("feature", oid(A));
+		plan.toggle("main", oid(B));
+		plan.set_deleted("hotfix");
+
+		assert_cmpstr(
+			Gitrlz.ResetPreview.command_for(plan, "main", existing({"main", "feature", "hotfix"})),
+			CompareOperator.EQ,
+			"git branch -f feature aaaaaaa\n" +
+			"git branch -D hotfix\n" +
+			"git reset --hard bbbbbbb");
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_command_never_deletes_the_checked_out_branch()
+{
+	var plan = new Gitrlz.ResetPlan();
+	plan.set_deleted("hotfix");
+
+	assert_cmpstr(Gitrlz.ResetPreview.command_for(plan, "hotfix", existing({"hotfix"})),
+	              CompareOperator.EQ, "");
+	assert_cmpstr(Gitrlz.ResetPreview.undeletable_branch(plan, "hotfix"),
+	              CompareOperator.EQ, "hotfix");
+	assert_null(Gitrlz.ResetPreview.undeletable_branch(plan, "main"));
+}
+
+private static void test_tips_drop_a_branch_the_plan_deletes()
+{
+	try
+	{
+		var t = tips({"main", A, "hotfix", B});
+
+		var plan = new Gitrlz.ResetPlan();
+		plan.set_deleted("hotfix");
+
+		var result = Gitrlz.ResetPreview.preview_tips(t, plan);
+
+		assert_true(contains_oid(result, oid(A)));
+		assert_false(contains_oid(result, oid(B)));
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
 public static int main(string[] args)
 {
 	Test.init(ref args);
@@ -323,6 +385,10 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/reset-preview/command-ordered", test_command_branch_f_lines_are_ordered);
 	Test.add_func("/gitrlz/reset-preview/command-empty", test_command_empty_plan_is_empty_string);
 	Test.add_func("/gitrlz/reset-preview/command-absent-recreated", test_command_absent_branch_is_recreated);
+	Test.add_func("/gitrlz/reset-preview/command-deleted", test_command_deleted_branch_uses_branch_d);
+	Test.add_func("/gitrlz/reset-preview/command-deleted-before-reset", test_command_deletions_come_before_the_reset);
+	Test.add_func("/gitrlz/reset-preview/command-keeps-checked-out", test_command_never_deletes_the_checked_out_branch);
+	Test.add_func("/gitrlz/reset-preview/tips-drop-deleted", test_tips_drop_a_branch_the_plan_deletes);
 	Test.add_func("/gitrlz/reset-preview/tips-move-planned", test_tips_move_a_planned_branch_off_its_old_commit);
 	Test.add_func("/gitrlz/reset-preview/tips-keep-unplanned", test_tips_keep_a_branch_that_is_not_planned);
 	Test.add_func("/gitrlz/reset-preview/tips-recreate-gone", test_tips_recreate_a_branch_that_is_gone);

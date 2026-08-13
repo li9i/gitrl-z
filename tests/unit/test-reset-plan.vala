@@ -262,6 +262,62 @@ private static void test_set_only_or_clear_selects_then_deselects()
 	}
 }
 
+private static void test_a_deletion_counts_towards_the_plan()
+{
+	var plan = new Gitrlz.ResetPlan();
+
+	assert_true(plan.is_empty());
+
+	plan.set_deleted("hotfix");
+
+	assert_false(plan.is_empty());
+	assert_cmpint(plan.size, CompareOperator.EQ, 1);
+	assert_true(plan.is_deleted("hotfix"));
+	assert_null(plan.target_for("hotfix"));
+}
+
+private static void test_deletions_come_back_sorted()
+{
+	var plan = new Gitrlz.ResetPlan();
+	plan.set_deleted("topic");
+	plan.set_deleted("bugfix");
+
+	var names = plan.deletions();
+
+	assert_cmpint(names.size, CompareOperator.EQ, 2);
+	assert_cmpstr(names[0], CompareOperator.EQ, "bugfix");
+	assert_cmpstr(names[1], CompareOperator.EQ, "topic");
+}
+
+private static void test_a_target_replaces_a_deletion()
+{
+	try
+	{
+		var plan = new Gitrlz.ResetPlan();
+		plan.set_deleted("feature");
+		plan.set_target("feature", oid(A));
+
+		assert_false(plan.is_deleted("feature"));
+		assert_cmpstr(plan.target_for("feature").to_string(), CompareOperator.EQ, A);
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_prune_drops_a_deletion_for_a_vanished_branch()
+{
+	var plan = new Gitrlz.ResetPlan();
+	plan.set_deleted("gone");
+	plan.set_deleted("kept");
+
+	var present = new Gee.ArrayList<string>();
+	present.add("kept");
+
+	plan.prune(present);
+
+	assert_false(plan.is_deleted("gone"));
+	assert_true(plan.is_deleted("kept"));
+}
+
 public static int main(string[] args)
 {
 	Test.init(ref args);
@@ -277,6 +333,11 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/reset-plan/set-target-same-keeps", test_set_target_same_row_keeps_it);
 	Test.add_func("/gitrlz/reset-plan/set-only-replaces-all", test_set_only_replaces_the_whole_plan);
 	Test.add_func("/gitrlz/reset-plan/set-only-or-clear", test_set_only_or_clear_selects_then_deselects);
+
+	Test.add_func("/gitrlz/reset-plan/deletion-counts", test_a_deletion_counts_towards_the_plan);
+	Test.add_func("/gitrlz/reset-plan/deletions-sorted", test_deletions_come_back_sorted);
+	Test.add_func("/gitrlz/reset-plan/target-replaces-deletion", test_a_target_replaces_a_deletion);
+	Test.add_func("/gitrlz/reset-plan/prune-deletions", test_prune_drops_a_deletion_for_a_vanished_branch);
 
 	return Test.run();
 }
