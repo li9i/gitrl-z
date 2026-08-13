@@ -1,3 +1,31 @@
+gitrl-z (0.6.0-1) noble; urgency=medium
+
+  * Draw the preview graph as the history the planned command would leave. A
+    planned branch is drawn at its target rather than at its real tip, so the
+    commits the command abandons drop out of the picture. A branch that no
+    plan touches is untouched, and a planned branch that no longer exists
+    still contributes its target, which is what makes recreating a deleted
+    branch visible.
+  * Keep the commit the window opened on in the graph only while the plan is
+    empty, and say so in the caption when no branch reaches it.
+  * Label each step of a rebase that carried several branches with the branch
+    it moved. A rebase run with --update-refs rewrites the branch it started
+    on and carries every branch that points into the range. Each carried
+    branch records its own move, and those records now name the steps, so the
+    command offered for a step moves the branch that step belongs to. A commit
+    claimed by more than one branch is left as it was.
+  * Open the diff of a commit on a double click in the graph pane, as the
+    context menu of the row already did.
+  * Script the animation in the README and record a fuller one: a reset that
+    brings back two commits, a second branch added to the same plan, a deleted
+    branch offered back, then a return to the present. One script builds the
+    repository, the other drives the binary in Xvfb and writes the GIF.
+  * Remove the code comments from every first-party source. The copyright and
+    licence headers stay, as do the comments marked for translators, and the
+    vendored gitg subtree is untouched.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Thu, 13 Aug 2026 15:10:00 +0200
+
 gitrl-z (0.5.0-1) noble; urgency=medium
 
   * Offer the diff of a commit and its full hash from a right click on any row

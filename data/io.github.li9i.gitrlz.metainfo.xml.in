@@ -62,6 +62,21 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.6.0" date="2026-08-13">
+      <description>
+        <p>
+          Draw the preview graph as the history the planned command leaves, so
+          the commits it abandons drop out of the picture.
+        </p>
+        <p>
+          Label each step of a rebase that carried several branches with the
+          branch it moved, so the command offered for that step moves the right
+          one.
+        </p>
+        <p>Open the diff of a commit on a double click in the graph.</p>
+        <p>Say in the caption when the graph carries an extra commit.</p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-08-10">
       <description>
         <p>
