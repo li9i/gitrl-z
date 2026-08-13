@@ -34,9 +34,12 @@ public class ResetPreview : Object
 
 		foreach (var entry in tips.entries)
 		{
-			if (!contains_oid(result, entry.value))
+			var moved = plan.target_for(entry.key);
+			var id = moved != null ? moved : entry.value;
+
+			if (!contains_oid(result, id))
 			{
-				result += entry.value;
+				result += id;
 			}
 		}
 
@@ -50,7 +53,7 @@ public class ResetPreview : Object
 			}
 		}
 
-		if (opened_at != null && !contains_oid(result, opened_at))
+		if (plan.is_empty() && opened_at != null && !contains_oid(result, opened_at))
 		{
 			result += opened_at;
 		}

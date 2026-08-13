@@ -308,7 +308,7 @@ private static void test_second_row_in_a_branch_moves_the_target()
 	}
 }
 
-private static void test_preview_keeps_the_tree_and_moves_the_branch()
+private static void test_preview_moves_the_branch_and_drops_what_it_leaves()
 {
 	try
 	{
@@ -335,9 +335,9 @@ private static void test_preview_keeps_the_tree_and_moves_the_branch()
 		assert_cmpint(index, CompareOperator.GE, 0);
 		assert_true(paned.toggle_entry(index));
 
-		assert_cmpint(paned.included_tips.length, CompareOperator.EQ, 2);
+		assert_cmpint(paned.included_tips.length, CompareOperator.EQ, 1);
 		assert_true(includes_oid(paned.included_tips, first));
-		assert_true(includes_oid(paned.included_tips, third));
+		assert_false(includes_oid(paned.included_tips, third));
 		assert_true(paned.command.contains(first.substring(0, 7)));
 
 		var first_oid = new Ggit.OId.from_string(first);
@@ -1746,7 +1746,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/head-view-click-deselects", test_head_view_click_deselects_the_same_row);
 	Test.add_func("/gitrlz/activity/head-view-arrow-never-deselects", test_head_view_arrow_travel_never_deselects);
 	Test.add_func("/gitrlz/activity/detached-head-offers-way-back", test_detached_head_offers_the_way_back);
-	Test.add_func("/gitrlz/activity/preview-keeps-tree-moves-branch", test_preview_keeps_the_tree_and_moves_the_branch);
+	Test.add_func("/gitrlz/activity/preview-moves-branch-drops-rest", test_preview_moves_the_branch_and_drops_what_it_leaves);
 	Test.add_func("/gitrlz/activity/preview-writes-nothing", test_preview_writes_nothing);
 	Test.add_func("/gitrlz/activity/graph-pills-follow-ref-change", test_graph_pills_follow_a_ref_change_outside_the_window);
 	Test.add_func("/gitrlz/activity/graph-keeps-start-commit", test_graph_keeps_the_commit_the_session_started_on);

@@ -4,7 +4,7 @@
 
 The reflog records every position of every branch: commits a rebase rewrote, commits a reset abandoned, branches that were deleted. `git` shows this as a wall of text. `gitrl-z` draws it out.
 
-It lists the reflog the way `gitg` shows history. Click an entry and the commit graph redraws with that branch moved to where a reset would put it, so you see where the branch goes and what it leaves behind in the same picture. `gitrl-z` gives you the command; running it stays your decision. **It writes nothing to the repository.**
+It lists the reflog the way `gitg` shows history. Click an entry and the commit graph redraws with that branch moved to where a reset would put it, so you see the history you get before you get it. `gitrl-z` gives you the command; running it stays your decision. **It writes nothing to the repository.**
 
 Pronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
 
@@ -17,7 +17,7 @@ Pronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control z
 Open `gitrl-z` after any of these and the reflog shows you what happened. Click the entry from before it went wrong and the graph shows you the way back.
 
 - **You ran `git reset --hard` and your commits are gone.** Find the reflog entry from immediately before the reset, and click it. The graph draws again with your branch at its initial position. You see what comes back, and `gitrl-z` gives you the `git reset --hard` command that recovers it.
-- **A rebase put the branch in a bad state.** The reflog keeps the tip from before the rebase. Click it to see the branch at that commit, in the same graph as the rebased version. Do the reset only when the result is correct.
+- **A rebase put the branch in a bad state.** The reflog keeps the tip from before the rebase. Click it to see the history the branch gets back, without the commits the rebase made. Do the reset only when the result is correct.
 - **You deleted a branch and you want it again.** `gitrl-z` finds the last position of the branch, and offers to make the branch again at that position. Thus `git branch -D` is not permanent.
 - **You are in a detached HEAD and you do not know why.** `gitrl-z` shows the position of HEAD related to the branches, and offers to attach it again.
 - **You will do a reset and you want to be sure.** Select any reflog entry. `gitrl-z` draws the resulting history first, so you know the destination before you do the reset.
