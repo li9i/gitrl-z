@@ -12,7 +12,11 @@ fi
 
 echo "testing $(basename "$deb")"
 
-docker run --rm -v "$deb:/tmp/gitrl-z.deb:ro" ubuntu:24.04 sh -eu -c '
+full=$(dpkg-deb -f "$deb" Version)
+upstream=${full%%-*}
+
+docker run --rm -e GITRLZ_VERSION="$upstream" \
+	-v "$deb:/tmp/gitrl-z.deb:ro" ubuntu:24.04 sh -eu -c '
 	export DEBIAN_FRONTEND=noninteractive
 
 	rm -f /etc/dpkg/dpkg.cfg.d/excludes
@@ -27,7 +31,7 @@ docker run --rm -v "$deb:/tmp/gitrl-z.deb:ro" ubuntu:24.04 sh -eu -c '
 	apt-get install -y -qq /tmp/gitrl-z.deb
 
 	echo "--- the binary runs ---"
-	test "$(gitrlz --version)" = "gitrlz 0.1.0"
+	test "$(gitrlz --version)" = "gitrlz $GITRLZ_VERSION"
 
 	echo "--- files are where the package said ---"
 	test -x /usr/bin/gitrlz
