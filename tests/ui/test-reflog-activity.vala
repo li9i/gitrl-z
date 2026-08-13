@@ -193,6 +193,7 @@ private static void test_empty_plan_shows_the_repository_tree()
 
 		assert_true(paned.graph_caption != "");
 		assert_false("after the command" in paned.graph_caption);
+		assert_false("opened" in paned.graph_caption);
 
 		paned.destroy();
 		repo.remove();
@@ -374,6 +375,8 @@ private static void test_graph_keeps_the_commit_the_session_started_on()
 
 		assert_true(includes_oid(paned.included_tips, first));
 		assert_true(includes_oid(paned.included_tips, third));
+
+		assert_true("opened" in paned.graph_caption);
 
 		paned.destroy();
 		repo.remove();

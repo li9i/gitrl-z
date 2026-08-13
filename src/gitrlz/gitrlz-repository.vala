@@ -40,6 +40,29 @@ public class Repository : Object
 		Ggit.StatusFlags.WORKING_TREE_RENAMED |
 		Ggit.StatusFlags.CONFLICTED;
 
+	public static bool any_reaches(Gitg.Repository repository,
+	                               Gee.Collection<Ggit.OId> tips,
+	                               Ggit.OId commit)
+	{
+		foreach (var tip in tips)
+		{
+			try
+			{
+				if (tip.equal(commit) || repository.get_descendant_of(tip, commit))
+				{
+					return true;
+				}
+			}
+			catch (Error e)
+			{
+				warning("could not test whether %s reaches %s: %s",
+				        tip.to_string(), commit.to_string(), e.message);
+			}
+		}
+
+		return false;
+	}
+
 	public static Gitg.Repository open(File location) throws RepositoryError
 	{
 		try

@@ -1323,7 +1323,7 @@ public class ReflogPaned : Gtk.Paned
 			refresh_copied();
 			d_banner.hide();
 			set_warning_visible(false);
-			d_graph_caption.label = _("Repository current state");
+			d_graph_caption.label = baseline_caption_text();
 			d_graph_caption.show();
 			d_stack_preview.visible_child_name = "graph";
 			return;
@@ -1340,6 +1340,17 @@ public class ReflogPaned : Gtk.Paned
 		d_graph_caption.show();
 
 		d_stack_preview.visible_child_name = "graph";
+	}
+
+	private string baseline_caption_text()
+	{
+		if (d_opened_at != null
+		    && !Repository.any_reaches(d_repository, d_tips.values, d_opened_at))
+		{
+			return _("Repository current state, with the commit you opened it on");
+		}
+
+		return _("Repository current state");
 	}
 
 	private string graph_caption_text()
