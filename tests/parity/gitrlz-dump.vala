@@ -61,8 +61,11 @@ public static int main(string[] args)
 	var entries = Gitrlz.Reflog.read(repository, ref_name);
 	var current = Gitrlz.Repository.current_branch(repository);
 
+	var rewritten = Gitrlz.Reflog.rewritten_tips(
+		repository, Gitrlz.Repository.list_branches(repository));
+
 	var operations = Gitrlz.ReflogAnnotations.classify_operations(entries);
-	var branches = Gitrlz.ReflogAnnotations.attribute_branches(entries, current);
+	var branches = Gitrlz.ReflogAnnotations.attribute_branches(entries, current, rewritten);
 
 	for (var i = 0; i < entries.size; i++)
 	{

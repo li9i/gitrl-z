@@ -306,11 +306,12 @@ public class ReflogList : Object
 	                     Gee.Map<string, int>? colours,
 	                     ResetPlan? plan,
 	                     string? view_branch,
-	                     int start_index)
+	                     int start_index,
+	                     Gee.Map<string, string>? rewritten = null)
 	{
 		d_entries = entries;
 		d_operations = ReflogAnnotations.classify_operations(entries);
-		d_branches = ReflogAnnotations.attribute_branches(entries, current_branch);
+		d_branches = ReflogAnnotations.attribute_branches(entries, current_branch, rewritten);
 		d_colours = colours;
 		d_plan = plan;
 		d_view_branch = view_branch;

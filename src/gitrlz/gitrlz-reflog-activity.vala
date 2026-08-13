@@ -79,6 +79,7 @@ public class ReflogPaned : Gtk.Paned
 
 	private Gee.List<string> d_branches;
 	private Gee.Map<string, Ggit.OId> d_tips;
+	private Gee.Map<string, string> d_rewritten;
 	private string? d_current_branch;
 
 	private Ggit.OId? d_opened_at;
@@ -121,6 +122,7 @@ public class ReflogPaned : Gtk.Paned
 	{
 		d_branches = new Gee.ArrayList<string>();
 		d_tips = new Gee.HashMap<string, Ggit.OId>();
+		d_rewritten = new Gee.HashMap<string, string>();
 
 		d_state_settings = new Settings("%s.state.reflog".printf(Config.APPLICATION_ID));
 		d_reflog_settings = new Settings("%s.preferences.reflog".printf(Config.APPLICATION_ID));
@@ -535,6 +537,7 @@ public class ReflogPaned : Gtk.Paned
 
 		d_branches = Repository.list_branches(d_repository);
 		d_tips = Repository.branch_tips(d_repository);
+		d_rewritten = Reflog.rewritten_tips(d_repository, d_branches);
 		d_current_branch = Repository.current_branch(d_repository);
 		d_colours = BranchColours.map(d_repository, d_tips);
 
@@ -731,7 +734,7 @@ public class ReflogPaned : Gtk.Paned
 			: -1;
 
 		d_list.populate(entries, d_current_branch, d_view == "all", d_colours, d_plan,
-		                view_branch, start_index);
+		                view_branch, start_index, d_rewritten);
 
 		update_reflog_caption();
 

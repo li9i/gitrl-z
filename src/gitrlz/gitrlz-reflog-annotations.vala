@@ -188,7 +188,8 @@ public class ReflogAnnotations : Object
 	}
 
 	public static string?[] attribute_branches(Gee.List<ReflogEntry> entries,
-	                                           string? default_branch = null)
+	                                           string? default_branch = null,
+	                                           Gee.Map<string, string>? rewritten = null)
 	{
 		var count = entries.size;
 		var result = new string?[count];
@@ -264,6 +265,25 @@ public class ReflogAnnotations : Object
 					}
 
 					run.clear();
+				}
+			}
+		}
+
+		if (rewritten != null)
+		{
+			for (var i = 0; i < count; i++)
+			{
+				if (operations[i].position != OperationPosition.MIDDLE
+				    || entries[i].new_id == null)
+				{
+					continue;
+				}
+
+				var sha = entries[i].new_id.to_string();
+
+				if (rewritten.has_key(sha))
+				{
+					result[i] = rewritten[sha];
 				}
 			}
 		}

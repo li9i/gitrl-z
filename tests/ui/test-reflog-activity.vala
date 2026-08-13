@@ -1645,6 +1645,57 @@ private static void test_detached_head_offers_the_way_back()
 	}
 }
 
+private static void test_update_refs_row_moves_its_own_branch()
+{
+	try
+	{
+		var repo = Repo.create();
+
+		repo.commit("first");
+		repo.git({"checkout", "--quiet", "-b", "top"});
+		repo.commit("lower work", "lower.txt");
+		repo.branch("lower");
+		repo.commit("top work", "top.txt");
+		repo.checkout("main");
+		repo.commit("main work", "main.txt");
+		repo.checkout("top");
+		repo.git({"rebase", "--quiet", "--update-refs", "main"});
+
+		var carried = repo.git({"rev-parse", "lower"}).strip();
+
+		var paned = activity_for(repo);
+
+		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+
+		var index = -1;
+
+		for (var i = 0; i < paned.list.entries.size; i++)
+		{
+			var id = paned.list.entries[i].new_id;
+
+			if (id != null && id.to_string() == carried)
+			{
+				index = i;
+				break;
+			}
+		}
+
+		assert_cmpint(index, CompareOperator.GE, 0);
+		assert_cmpstr(paned.list.branch_for_index(index), CompareOperator.EQ, "lower");
+
+		assert_true(paned.toggle_entry(index));
+		assert_true(paned.command.contains("git branch -f lower "));
+		assert_false(paned.command.contains("top"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 public static int main(string[] args)
 {
 	Environment.set_variable("GSETTINGS_BACKEND", "memory", true);
@@ -1731,6 +1782,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/graph-keeps-scroll", test_graph_keeps_its_scroll_across_a_toggle);
 	Test.add_func("/gitrlz/activity/graph-columns-fit", test_graph_columns_fit_on_open);
 	Test.add_func("/gitrlz/activity/columns-fit", test_columns_fit_their_content);
+	Test.add_func("/gitrlz/activity/update-refs-row-moves-its-branch", test_update_refs_row_moves_its_own_branch);
 
 	return Test.run();
 }

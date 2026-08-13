@@ -72,6 +72,8 @@ public class ReflogEntry : Object
 
 public class Reflog : Object
 {
+	private const string REWRITTEN = "rewritten during rebase";
+
 	public static Gee.List<ReflogEntry> read(Gitg.Repository repository,
 	                                         string ref_name,
 	                                         uint limit = 0)
@@ -157,6 +159,41 @@ public class Reflog : Object
 		}
 
 		return entries;
+	}
+
+	public static Gee.Map<string, string> rewritten_tips(Gitg.Repository repository,
+	                                                     Gee.List<string> branches)
+	{
+		var claimed = new Gee.HashMap<string, string>();
+		var disputed = new Gee.HashSet<string>();
+
+		foreach (var branch in branches)
+		{
+			foreach (var entry in read(repository, branch))
+			{
+				if (entry.new_id == null || entry.message.strip() != REWRITTEN)
+				{
+					continue;
+				}
+
+				var sha = entry.new_id.to_string();
+
+				if (claimed.has_key(sha) && claimed[sha] != branch)
+				{
+					disputed.add(sha);
+					continue;
+				}
+
+				claimed[sha] = branch;
+			}
+		}
+
+		foreach (var sha in disputed)
+		{
+			claimed.unset(sha);
+		}
+
+		return claimed;
 	}
 }
 

@@ -285,6 +285,67 @@ private static void test_against_a_real_reflog()
 	}
 }
 
+private static string? branch_at_commit(Gee.List<Gitrlz.ReflogEntry> entries,
+                                        string?[] branches,
+                                        Ggit.OId id)
+{
+	for (var i = 0; i < entries.size; i++)
+	{
+		if (entries[i].new_id != null && entries[i].new_id.equal(id))
+		{
+			return branches[i];
+		}
+	}
+
+	return null;
+}
+
+private static void test_attribute_credits_update_refs_siblings()
+{
+	try
+	{
+		var repo = Repo.create();
+
+		repo.commit("base");
+		repo.git({"checkout", "--quiet", "-b", "top"});
+		repo.commit("one", "one.txt");
+		repo.branch("lower");
+		repo.commit("two", "two.txt");
+		repo.branch("upper");
+		repo.commit("three", "three.txt");
+		repo.checkout("main");
+		repo.commit("newbase", "newbase.txt");
+		repo.checkout("top");
+		repo.git({"rebase", "--quiet", "--update-refs", "main"});
+
+		var location = Gitrlz.Application.discover_repository(repo.path);
+		assert_nonnull(location);
+
+		var repository = Gitrlz.Repository.open(location);
+		var entries = Gitrlz.Reflog.read(repository, "HEAD");
+		var tips = Gitrlz.Repository.branch_tips(repository);
+
+		var rewritten = Gitrlz.Reflog.rewritten_tips(
+			repository, Gitrlz.Repository.list_branches(repository));
+
+		var branches = Gitrlz.ReflogAnnotations.attribute_branches(
+			entries, "top", rewritten);
+
+		assert_cmpstr(branch_at_commit(entries, branches, tips["lower"]),
+		              CompareOperator.EQ, "lower");
+		assert_cmpstr(branch_at_commit(entries, branches, tips["upper"]),
+		              CompareOperator.EQ, "upper");
+		assert_cmpstr(branch_at_commit(entries, branches, tips["top"]),
+		              CompareOperator.EQ, "top");
+
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_describe_distinguishes_branch_forms()
 {
 	assert_cmpstr(
@@ -378,6 +439,7 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/annotations/attribute-credits-a-rebase-run", test_attribute_credits_a_rebase_run_to_its_branch);
 	Test.add_func("/gitrlz/annotations/attribute-empty", test_attribute_empty);
 	Test.add_func("/gitrlz/annotations/against-a-real-reflog", test_against_a_real_reflog);
+	Test.add_func("/gitrlz/annotations/attribute-credits-update-refs-siblings", test_attribute_credits_update_refs_siblings);
 	Test.add_func("/gitrlz/annotations/describe-branch-forms", test_describe_distinguishes_branch_forms);
 	Test.add_func("/gitrlz/annotations/branch-force-is-real", test_branch_force_message_form_is_real);
 
