@@ -16,16 +16,31 @@ export GIT_AUTHOR_NAME="Ada Lovelace"
 export GIT_AUTHOR_EMAIL="ada@example.com"
 export GIT_COMMITTER_NAME="Ada Lovelace"
 export GIT_COMMITTER_EMAIL="ada@example.com"
-export GIT_AUTHOR_DATE="2026-07-20 10:00:00 +0200"
-export GIT_COMMITTER_DATE="2026-07-20 10:00:00 +0200"
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_SYSTEM=/dev/null
+
+minutes=0
+
+tick() {
+	minutes=$((minutes + 9))
+
+	stamp=$(printf '2026-07-20 %02d:%02d:00 +0200' \
+		$((9 + minutes / 60)) $((minutes % 60)))
+
+	GIT_AUTHOR_DATE=$stamp
+	GIT_COMMITTER_DATE=$stamp
+
+	export GIT_AUTHOR_DATE GIT_COMMITTER_DATE
+}
+
+tick
 
 git init -q --initial-branch=main
 git config user.name "Ada Lovelace"
 git config user.email "ada@example.com"
 
 commit() {
+	tick
 	printf '%s\n' "$2" > "$1"
 	git add -A
 	git commit -q -m "$3"
@@ -34,27 +49,36 @@ commit() {
 commit README.md readme "initial commit"
 commit parser.py parser "add the parser"
 
+tick
 git checkout -q -b feature
 commit lexer.py lexer "add the lexer"
 commit test_lexer.py lexed "test the lexer"
 
+tick
 git checkout -q main
 commit Makefile rules "add the build rules"
+tick
 git merge -q --no-ff -m "merge feature" feature
 
+tick
 git checkout -q -b topic "$(git rev-parse main~2)"
 commit report.md report "add the report"
 commit test_report.py reported "test the report"
+tick
 git rebase -q main
 
+tick
 git checkout -q main
 commit manual.md manual "write the manual"
 commit CHANGELOG.md changelog "write the changelog"
+tick
 git reset -q --hard HEAD~2
 
+tick
 git checkout -q -b spike
 commit parser.py spiked "try another approach"
 
+tick
 git checkout -q main
 git branch -q -D spike
 
