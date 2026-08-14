@@ -22,6 +22,7 @@ namespace Gitrlz
 
 public class RewindWindow : Gtk.Dialog
 {
+	private Gtk.Frame d_banner;
 	private string d_command;
 
 	public RewindWindow(Gtk.Window parent,
@@ -113,11 +114,11 @@ public class RewindWindow : Gtk.Dialog
 		box.add(label);
 		box.add(copy);
 
-		var frame = new Gtk.Frame(null);
-		frame.get_style_context().add_class("gitrlz-command-banner");
-		frame.add(box);
+		d_banner = new Gtk.Frame(null);
+		d_banner.get_style_context().add_class("gitrlz-command-banner");
+		d_banner.add(box);
 
-		return frame;
+		return d_banner;
 	}
 
 	private Gtk.Widget build_table(Gee.List<string> branches,
@@ -161,7 +162,14 @@ public class RewindWindow : Gtk.Dialog
 		scrolled.shadow_type = Gtk.ShadowType.IN;
 		scrolled.add(grid);
 
-		return scrolled;
+		var title = new Gtk.Label(_("Where the branches move"));
+		title.xalign = 0;
+
+		var box = new Gtk.Box(Gtk.Orientation.VERTICAL, 4);
+		box.add(title);
+		box.pack_start(scrolled, true, true, 0);
+
+		return box;
 	}
 
 	private Gtk.Label cell(string text, bool monospace)
@@ -198,6 +206,8 @@ public class RewindWindow : Gtk.Dialog
 		clipboard.set_text(d_command, -1);
 		clipboard.set_can_store(null);
 		clipboard.store();
+
+		d_banner.get_style_context().add_class("copied");
 	}
 }
 
