@@ -178,6 +178,7 @@ public class ReflogPaned : Gtk.Paned
 		d_colours = new Gee.HashMap<string, int>();
 
 		d_refs_list.row_selected.connect(on_ref_selected);
+		d_refs_list.button_press_event.connect(on_refs_button_press);
 
 		d_reflog_list.button_press_event.connect(on_button_press);
 		d_reflog_list.key_press_event.connect(on_key_press);
@@ -406,6 +407,23 @@ public class ReflogPaned : Gtk.Paned
 
 		clipboard.set_can_store(null);
 		clipboard.store();
+	}
+
+	private void popup_branch_menu(Gtk.Widget parent, string branch, Gdk.EventButton event)
+	{
+		var menu = new Gtk.Menu();
+
+		var copy = new Gtk.MenuItem.with_mnemonic(_("_Copy branch name"));
+
+		copy.activate.connect(() => {
+			copy_to_clipboard(branch);
+		});
+
+		menu.append(copy);
+
+		menu.attach_to_widget(parent, null);
+		menu.show_all();
+		menu.popup_at_pointer(event);
 	}
 
 	private void popup_commit_menu(Gtk.Widget parent, Ggit.OId id, Gdk.EventButton event)
@@ -755,6 +773,33 @@ public class ReflogPaned : Gtk.Paned
 		}
 	}
 
+	private bool on_refs_button_press(Gdk.EventButton event)
+	{
+		if (event.type != Gdk.EventType.BUTTON_PRESS
+		    || event.button != Gdk.BUTTON_SECONDARY)
+		{
+			return false;
+		}
+
+		var row = d_refs_list.get_row_at_y((int)event.y);
+
+		if (row == null || !row.selectable)
+		{
+			return false;
+		}
+
+		var id = row.get_data<string>("ref");
+
+		if (id == null || !(id in d_branches))
+		{
+			return false;
+		}
+
+		popup_branch_menu(d_refs_list, id, event);
+
+		return true;
+	}
+
 	private void on_ref_selected(Gtk.ListBoxRow? row)
 	{
 		if (row == null)
@@ -1028,11 +1073,27 @@ public class ReflogPaned : Gtk.Paned
 		}
 
 		Gtk.TreePath? path;
+		Gtk.TreeViewColumn? column;
+		int cell_x;
+		int cell_y;
 
 		if (!d_commit_list_view.get_path_at_pos((int)event.x, (int)event.y,
-		                                        out path, null, null, null))
+		                                        out path, out column,
+		                                        out cell_x, out cell_y))
 		{
 			return false;
+		}
+
+		if (menu && column != null)
+		{
+			var branch = graph_branch_at(path, column, cell_x);
+
+			if (branch != null)
+			{
+				popup_branch_menu(d_commit_list_view, branch, event);
+
+				return true;
+			}
 		}
 
 		var commit = graph_commit_at(path);
@@ -1069,6 +1130,30 @@ public class ReflogPaned : Gtk.Paned
 		{
 			return null;
 		}
+	}
+
+	private string? graph_branch_at(Gtk.TreePath path,
+	                                Gtk.TreeViewColumn column,
+	                                int cell_x)
+	{
+		int cell_w;
+
+		var cell = d_commit_list_view.find_cell_at_pos(column, path, cell_x, out cell_w)
+			as Gitg.CellRendererLanes;
+
+		if (cell == null)
+		{
+			return null;
+		}
+
+		var reference = cell.get_ref_at_pos(d_commit_list_view, cell_x, cell_w, null);
+
+		if (reference == null)
+		{
+			return null;
+		}
+
+		return reference.parsed_name.shortname;
 	}
 
 	private Gitg.Commit? graph_commit_at(Gtk.TreePath path)
