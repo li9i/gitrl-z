@@ -409,23 +409,6 @@ public class ReflogPaned : Gtk.Paned
 		clipboard.store();
 	}
 
-	private void popup_branch_menu(Gtk.Widget parent, string branch, Gdk.EventButton event)
-	{
-		var menu = new Gtk.Menu();
-
-		var copy = new Gtk.MenuItem.with_mnemonic(_("_Copy branch name"));
-
-		copy.activate.connect(() => {
-			copy_to_clipboard(branch);
-		});
-
-		menu.append(copy);
-
-		menu.attach_to_widget(parent, null);
-		menu.show_all();
-		menu.popup_at_pointer(event);
-	}
-
 	private void popup_commit_menu(Gtk.Widget parent, Ggit.OId id, Gdk.EventButton event)
 	{
 		var menu = new Gtk.Menu();
@@ -446,6 +429,23 @@ public class ReflogPaned : Gtk.Paned
 
 		copy.activate.connect(() => {
 			copy_to_clipboard(id.to_string());
+		});
+
+		menu.append(copy);
+
+		menu.attach_to_widget(parent, null);
+		menu.show_all();
+		menu.popup_at_pointer(event);
+	}
+
+	private void popup_ref_menu(Gtk.Widget parent, string name, Gdk.EventButton event)
+	{
+		var menu = new Gtk.Menu();
+
+		var copy = new Gtk.MenuItem.with_mnemonic(_("_Copy name"));
+
+		copy.activate.connect(() => {
+			copy_to_clipboard(name);
 		});
 
 		menu.append(copy);
@@ -795,7 +795,7 @@ public class ReflogPaned : Gtk.Paned
 			return false;
 		}
 
-		popup_branch_menu(d_refs_list, id, event);
+		popup_ref_menu(d_refs_list, id, event);
 
 		return true;
 	}
@@ -1086,11 +1086,11 @@ public class ReflogPaned : Gtk.Paned
 
 		if (menu && column != null)
 		{
-			var branch = graph_branch_at(path, column, cell_x);
+			var name = graph_ref_at(path, column, cell_x);
 
-			if (branch != null)
+			if (name != null)
 			{
-				popup_branch_menu(d_commit_list_view, branch, event);
+				popup_ref_menu(d_commit_list_view, name, event);
 
 				return true;
 			}
@@ -1132,9 +1132,29 @@ public class ReflogPaned : Gtk.Paned
 		}
 	}
 
-	private string? graph_branch_at(Gtk.TreePath path,
-	                                Gtk.TreeViewColumn column,
-	                                int cell_x)
+	private Gitg.Commit? graph_commit_at(Gtk.TreePath path)
+	{
+		if (d_commit_model == null)
+		{
+			return null;
+		}
+
+		Gtk.TreeIter iter;
+
+		if (!d_commit_model.get_iter(out iter, path))
+		{
+			return null;
+		}
+
+		Value value;
+		d_commit_model.get_value(iter, Gitg.CommitModelColumns.COMMIT, out value);
+
+		return value.get_object() as Gitg.Commit;
+	}
+
+	private string? graph_ref_at(Gtk.TreePath path,
+	                             Gtk.TreeViewColumn column,
+	                             int cell_x)
 	{
 		int cell_w;
 
@@ -1154,26 +1174,6 @@ public class ReflogPaned : Gtk.Paned
 		}
 
 		return reference.parsed_name.shortname;
-	}
-
-	private Gitg.Commit? graph_commit_at(Gtk.TreePath path)
-	{
-		if (d_commit_model == null)
-		{
-			return null;
-		}
-
-		Gtk.TreeIter iter;
-
-		if (!d_commit_model.get_iter(out iter, path))
-		{
-			return null;
-		}
-
-		Value value;
-		d_commit_model.get_value(iter, Gitg.CommitModelColumns.COMMIT, out value);
-
-		return value.get_object() as Gitg.Commit;
 	}
 
 	private void show_diff(Ggit.Commit commit)
