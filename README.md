@@ -8,20 +8,31 @@ It lists the reflog the way `gitg` shows history. Click an entry and the commit 
 
 Pronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
 
-![Reflog entries clicked one after another, with the commit graph redrawn under each one](docs/screenshots/demo-one-branch.gif)
+![HEAD walked backwards one entry at a time, with the commit graph redrawn under each one](docs/screenshots/demo-head.gif)
 
-`gitrl-z` is built from `gitg`. It uses the language of gitg (Vala) and the same libraries. The commit graph in the preview is the renderer of gitg.
+## Rewind the whole repository
 
-## Examples
+One branch at a time is often not the question. The question is what the repository looked like an hour ago, before the afternoon went wrong.
+
+**All branches**, at the top of the sidebar, answers that. It puts a dial above the graph. Every stop on the dial is a moment the repository actually passed through, gathered from the reflogs of all local branches. Move the dial and every branch goes back to where it stood at that moment, all together, and the graph redraws at each stop. Branches that did not exist yet are listed as removed.
+
+![The dial moved back through the moments the repository passed through, every branch moving with it](docs/screenshots/demo-rewind.gif)
+
+**Rewind to this point** lists where each branch lands and the commands that take you there. Running them is still yours to do.
+
+## What it gets back
 
 Open `gitrl-z` after any of these and the reflog shows you what happened. Click the entry from before it went wrong and the graph shows you the way back.
 
+![A hard reset undone, a deleted branch created again, and a rebase undone, each from its reflog entry](docs/screenshots/demo-recover.gif)
+
 - **You ran `git reset --hard` and your commits are gone.** Find the reflog entry from immediately before the reset, and click it. The graph draws again with your branch at its initial position. You see what comes back, and `gitrl-z` gives you the `git reset --hard` command that recovers it.
-- **A rebase put the branch in a bad state.** The reflog keeps the tip from before the rebase. Click it to see the history the branch gets back, without the commits the rebase made. Do the reset only when the result is correct.
 - **You deleted a branch and you want it again.** `gitrl-z` finds the last position of the branch, and offers to make the branch again at that position. Thus `git branch -D` is not permanent.
+- **A rebase put the branch in a bad state.** The reflog keeps the tip from before the rebase. Click it to see the history the branch gets back, without the commits the rebase made. Do the reset only when the result is correct.
 - **You are in a detached HEAD and you do not know why.** `gitrl-z` shows the position of HEAD related to the branches, and offers to attach it again.
 - **You will do a reset and you want to be sure.** Select any reflog entry. `gitrl-z` draws the resulting history first, so you know the destination before you do the reset.
-- **The whole repository was in a better state an hour ago.** The rewind button in the header bar opens a dial above the graph. Each stop on it is a moment the repository actually passed through, taken from the reflogs of every local branch, and moving the dial puts every branch back where it stood at that moment. The graph redraws at each stop. Branches that did not exist yet are listed as removed, and the command that gets you there goes to the clipboard when you ask for it.
+
+`gitrl-z` is built from `gitg`. It uses the language of gitg (Vala) and the same libraries. The commit graph in the preview is the renderer of gitg.
 
 ## Installation
 
