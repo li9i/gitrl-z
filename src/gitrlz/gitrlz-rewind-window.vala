@@ -97,14 +97,13 @@ public class RewindWindow : Gtk.Dialog
 	{
 		var label = new Gtk.Label(command);
 		label.xalign = 0;
-		label.yalign = 0;
 		label.hexpand = true;
 		label.selectable = true;
 		label.get_style_context().add_class("gitrlz-command-text");
 
 		var copy = new Gtk.Button.from_icon_name("edit-copy-symbolic",
 		                                         Gtk.IconSize.MENU);
-		copy.valign = Gtk.Align.START;
+		copy.valign = Gtk.Align.CENTER;
 		copy.relief = Gtk.ReliefStyle.NONE;
 		copy.tooltip_text = _("Copy the command");
 		copy.clicked.connect(copy_command);
