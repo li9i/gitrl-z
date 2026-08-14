@@ -62,6 +62,25 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.0" date="2026-08-14">
+      <description>
+        <p>
+          Rewind the whole repository. All branches in the sidebar merges the
+          reflogs of every local branch into the moments the repository has
+          passed through, and a dial over the graph puts every branch back
+          where it stood at the moment it rests on.
+        </p>
+        <p>
+          List where each branch lands, and the commands that take you there,
+          in a window of its own. A branch that did not exist at that moment is
+          listed for removal.
+        </p>
+        <p>
+          Copy the name of a branch, a tag or a remote ref from a right click
+          in the sidebar or on a label in the graph.
+        </p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-08-13">
       <description>
         <p>

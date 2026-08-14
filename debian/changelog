@@ -1,3 +1,38 @@
+gitrl-z (0.7.0-1) noble; urgency=medium
+
+  * Rewind every local branch from a dial over the graph. The reflogs of all
+    local branches are folded into the list of distinct moments the repository
+    has passed through, two entries written in the same second counting as one
+    moment. All branches in the sidebar shows those reflogs merged and ordered
+    by time, each row carrying the branch it belongs to, and the dial steps
+    through the moments and puts every branch back where it stood at the one
+    it rests on. The moment can also be typed to the second, in which case the
+    dial resolves it to the state in force then.
+  * Plan a branch that did not exist at the chosen moment for removal. The
+    reset plan gains a set of deletions alongside its targets, and the
+    generated command gains a branch -D line. The checked out branch is never
+    offered for removal, because git cannot delete the branch it stands on.
+    Generated commands are one statement per line rather than joined with
+    semicolons.
+  * Say under the reflog only what can cost work: how many branches move, how
+    many are removed, and how many files hold uncommitted changes. Rewind to
+    this point opens the commands in a window of their own, above a branch by
+    branch listing of where each one stands and where it would go.
+  * Apply the Time and Entries limits to the dial as well as the table. They
+    narrow the moments on offer rather than the history those moments are
+    computed from, so every branch position stays accurate however far the
+    limits are drawn in.
+  * Copy the name of a ref from a right click in the sidebar list or on a
+    label in the graph pane. The graph finds the label under the pointer
+    through the lanes renderer, so a right click on the commit itself still
+    opens the commit menu.
+  * List HEAD above All branches in the sidebar, since HEAD is the view the
+    window opens on.
+  * Record one animation per scenario for the README, and give the
+    repository-wide rewind a section of its own there.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Fri, 14 Aug 2026 18:30:00 +0200
+
 gitrl-z (0.6.0-1) noble; urgency=medium
 
   * Draw the preview graph as the history the planned command would leave. A
