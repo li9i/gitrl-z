@@ -134,8 +134,8 @@ private static void test_refs_panel_contents()
 
 		var ids = paned.ref_ids();
 
-		assert_cmpstr(ids[0], CompareOperator.EQ, "rewind");
-		assert_cmpstr(ids[1], CompareOperator.EQ, "all");
+		assert_cmpstr(ids[0], CompareOperator.EQ, "all");
+		assert_cmpstr(ids[1], CompareOperator.EQ, "rewind");
 		assert_true(ids.contains("feature"));
 		assert_true(ids.contains("main"));
 		assert_false(ids.contains("stash"));

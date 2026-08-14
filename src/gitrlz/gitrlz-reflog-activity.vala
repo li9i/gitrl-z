@@ -657,8 +657,8 @@ public class ReflogPaned : Gtk.Paned
 		}
 
 		add_ref_row("", _("Repository"), true);
-		add_ref_row("rewind", _("All branches"), false);
 		add_ref_row("all", _("HEAD"), false);
+		add_ref_row("rewind", _("All branches"), false);
 		add_ref_row("", _("Branches"), true);
 
 		foreach (var branch in d_branches)
