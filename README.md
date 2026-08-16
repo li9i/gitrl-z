@@ -2,23 +2,24 @@
 
 > A visual reflog browser with reset preview
 
-The reflog records every position of every branch: commits a rebase rewrote, commits a reset abandoned, branches that were deleted. `git` shows this as a wall of text. `gitrl-z` draws it out.
+The reflog records every position of every branch: commits a rebase rewrote, commits a reset abandoned, branches that were deleted. While `git` shows this as a wall of text, `gitrl-z` draws it out.
 
-It lists the reflog the way `gitg` shows history. Click an entry and the commit graph redraws with that branch moved to where a reset would put it, so you see the history you get before you get it. `gitrl-z` gives you the command; running it stays your decision. **It writes nothing to the repository.**
+It lists the reflog the way `gitg` shows history. Click an entry and the commit graph redraws with that branch moved to where a reset would put it, so you see the history you get before you get it. `gitrl-z` gives you the command but running it stays your decision. **It writes nothing to the repository.**
 
-Pronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
+> [!TIP]
+> gitrl-z is ronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
 
 ![HEAD walked backwards one entry at a time, with the commit graph redrawn under each one](docs/screenshots/demo-head.gif)
 
 ## Rewind the whole repository
 
-One branch at a time is often not the question. The question is what the repository looked like an hour ago, before the afternoon went wrong.
+One branch at a time is often not the question. The question is what the repository looked like an hour ago, before disaster struck.
 
 **All branches**, at the top of the sidebar, answers that. It puts a dial above the graph. Every stop on the dial is a moment the repository actually passed through, gathered from the reflogs of all local branches. Move the dial and every branch goes back to where it stood at that moment, all together, and the graph redraws at each stop. Branches that did not exist yet are listed as removed.
 
 ![The dial moved back through the moments the repository passed through, every branch moving with it](docs/screenshots/demo-rewind.gif)
 
-**Rewind to this point** lists where each branch lands and the commands that take you there. Running them is still yours to do.
+Button **Rewind to this point** lists where each branch will land and the commands that will take the repository there.
 
 ## What it gets back
 
