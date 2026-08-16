@@ -17,6 +17,8 @@ One branch at a time is often not the question. The question is what the reposit
 
 **All branches**, at the top of the sidebar, answers that. It puts a dial above the graph. Every stop on the dial is a moment the repository actually passed through, gathered from the reflogs of all local branches. Move the dial and every branch goes back to where it stood at that moment, all together, and the graph redraws at each stop. Branches that did not exist yet are listed as removed.
 
+The stops sit where the moments fall in time, so an hour of work reads as a cluster and a quiet fortnight as a gap. Long stretches of quiet are drawn shorter than they were, otherwise they take the whole dial and leave the busy part too small to click.
+
 ![The dial moved back through the moments the repository passed through, every branch moving with it](docs/screenshots/demo-rewind.gif)
 
 Button **Rewind to this point** lists where each branch will land and the commands that will take the repository there.

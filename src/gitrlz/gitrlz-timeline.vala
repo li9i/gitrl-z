@@ -136,4 +136,109 @@ public class Timeline : Object
 	}
 }
 
+public class TimelineAxis : Object
+{
+	private const int64 SPREAD = 6;
+
+	private double[] d_marks;
+
+	public TimelineAxis(Gee.List<TimelineState> states)
+	{
+		d_marks = spread(states);
+	}
+
+	public double upper
+	{
+		get { return d_marks.length > 0 ? d_marks[d_marks.length - 1] : 0.0; }
+	}
+
+	public double mark(int index)
+	{
+		if (d_marks.length == 0)
+		{
+			return 0.0;
+		}
+
+		if (index < 0)
+		{
+			return d_marks[0];
+		}
+
+		return index < d_marks.length ? d_marks[index] : d_marks[d_marks.length - 1];
+	}
+
+	public int nearest(double value)
+	{
+		var nearest = -1;
+		var closest = 0.0;
+
+		for (var i = 0; i < d_marks.length; i++)
+		{
+			var distance = Math.fabs(d_marks[i] - value);
+
+			if (nearest < 0 || distance < closest)
+			{
+				nearest = i;
+				closest = distance;
+			}
+		}
+
+		return nearest;
+	}
+
+	private static double[] spread(Gee.List<TimelineState> states)
+	{
+		double[] marks = {};
+
+		if (states.size == 0)
+		{
+			return marks;
+		}
+
+		marks += 0.0;
+
+		if (states.size == 1)
+		{
+			return marks;
+		}
+
+		var typical = typical_gap(states);
+		var widest = typical * SPREAD;
+		var narrowest = int64.max(1, typical / SPREAD);
+
+		var at = 0.0;
+
+		for (var i = 1; i < states.size; i++)
+		{
+			var gap = states[i].when.to_unix() - states[i - 1].when.to_unix();
+
+			at += (double)int64.min(widest, int64.max(narrowest, gap));
+			marks += at;
+		}
+
+		return marks;
+	}
+
+	private static int64 typical_gap(Gee.List<TimelineState> states)
+	{
+		var gaps = new Gee.ArrayList<int64?>();
+
+		for (var i = 1; i < states.size; i++)
+		{
+			gaps.add(states[i].when.to_unix() - states[i - 1].when.to_unix());
+		}
+
+		gaps.sort((a, b) => {
+			if (a == b)
+			{
+				return 0;
+			}
+
+			return a < b ? -1 : 1;
+		});
+
+		return gaps[(gaps.size - 1) / 2];
+	}
+}
+
 }

@@ -177,6 +177,44 @@ private static void test_plan_leaves_out_a_branch_already_in_place()
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
 
+private static void test_marks_keep_the_time_between_states()
+{
+	try
+	{
+		var repo = Repo.create();
+		repo.commit_at(1, "first");
+		repo.commit_at(2, "second");
+		repo.commit_at(4, "third");
+
+		var axis = new Gitrlz.TimelineAxis(states_of(repo));
+
+		assert_cmpint((int)(axis.mark(1) - axis.mark(0)), CompareOperator.EQ, 86400);
+		assert_cmpint((int)(axis.mark(2) - axis.mark(1)), CompareOperator.EQ, 172800);
+
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
+private static void test_marks_squash_a_long_idle_gap()
+{
+	try
+	{
+		var repo = Repo.create();
+		repo.commit_at(1, "first");
+		repo.commit_at(2, "second");
+		repo.commit_at(100, "third");
+
+		var axis = new Gitrlz.TimelineAxis(states_of(repo));
+
+		assert_cmpint((int)(axis.mark(1) - axis.mark(0)), CompareOperator.EQ, 86400);
+		assert_cmpint((int)(axis.mark(2) - axis.mark(1)), CompareOperator.EQ, 6 * 86400);
+
+		repo.remove();
+	}
+	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
+}
+
 public static int main(string[] args)
 {
 	Test.init(ref args);
@@ -188,6 +226,8 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/timeline/plan-moves", test_plan_moves_a_branch_that_stood_elsewhere);
 	Test.add_func("/gitrlz/timeline/plan-deletes", test_plan_deletes_a_branch_that_did_not_exist);
 	Test.add_func("/gitrlz/timeline/plan-empty-at-now", test_plan_leaves_out_a_branch_already_in_place);
+	Test.add_func("/gitrlz/timeline/marks-follow-time", test_marks_keep_the_time_between_states);
+	Test.add_func("/gitrlz/timeline/marks-squash-idle", test_marks_squash_a_long_idle_gap);
 
 	return Test.run();
 }

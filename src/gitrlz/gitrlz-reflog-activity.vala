@@ -130,6 +130,8 @@ public class ReflogPaned : Gtk.Paned
 
 	private Gee.List<TimelineState> d_states;
 
+	private TimelineAxis d_axis;
+
 	private const int BANNER_MARGIN = 8;
 
 	private const int DENSE_MARK_LIMIT = 60;
@@ -226,8 +228,10 @@ public class ReflogPaned : Gtk.Paned
 		d_banner_copy.clicked.connect(copy_command);
 
 		d_states = new Gee.ArrayList<TimelineState>();
+		d_axis = new TimelineAxis(d_states);
 
 		d_rewind_scale.value_changed.connect(on_rewind_value_changed);
+		d_rewind_scale.change_value.connect(on_rewind_change_value);
 		d_rewind_scale.size_allocate.connect(() => { align_dial_controls(); });
 		d_rewind_entry.activate.connect(on_rewind_entry_activate);
 		d_rewind_back.clicked.connect(() => { step_rewind(-1); });
@@ -1573,7 +1577,7 @@ public class ReflogPaned : Gtk.Paned
 
 	public int rewind_position
 	{
-		get { return d_rewinding ? (int)Math.round(d_rewind_scale.get_value()) : -1; }
+		get { return d_rewinding ? rewind_index() : -1; }
 	}
 
 	public string rewind_summary
@@ -1583,7 +1587,7 @@ public class ReflogPaned : Gtk.Paned
 
 	public void set_rewind_position(int index)
 	{
-		d_rewind_scale.set_value(index);
+		d_rewind_scale.set_value(d_axis.mark(index));
 	}
 
 	public string rewind_moment
@@ -1603,8 +1607,10 @@ public class ReflogPaned : Gtk.Paned
 			? within_limits(Timeline.read(d_repository, d_branches))
 			: new Gee.ArrayList<TimelineState>();
 
+		d_axis = new TimelineAxis(d_states);
+
 		d_rewind_adjustment.lower = 0;
-		d_rewind_adjustment.upper = d_states.size > 0 ? d_states.size - 1 : 0;
+		d_rewind_adjustment.upper = d_axis.upper;
 
 		add_dial_marks();
 
@@ -1659,6 +1665,49 @@ public class ReflogPaned : Gtk.Paned
 		return kept;
 	}
 
+	private bool on_rewind_change_value(Gtk.ScrollType scroll, double value)
+	{
+		if (d_states.size == 0)
+		{
+			return true;
+		}
+
+		var index = rewind_index();
+
+		switch (scroll)
+		{
+			case Gtk.ScrollType.STEP_BACKWARD:
+			case Gtk.ScrollType.STEP_LEFT:
+			case Gtk.ScrollType.STEP_DOWN:
+			case Gtk.ScrollType.PAGE_BACKWARD:
+			case Gtk.ScrollType.PAGE_LEFT:
+			case Gtk.ScrollType.PAGE_DOWN:
+				index--;
+				break;
+			case Gtk.ScrollType.STEP_FORWARD:
+			case Gtk.ScrollType.STEP_RIGHT:
+			case Gtk.ScrollType.STEP_UP:
+			case Gtk.ScrollType.PAGE_FORWARD:
+			case Gtk.ScrollType.PAGE_RIGHT:
+			case Gtk.ScrollType.PAGE_UP:
+				index++;
+				break;
+			case Gtk.ScrollType.START:
+				index = 0;
+				break;
+			case Gtk.ScrollType.END:
+				index = d_states.size - 1;
+				break;
+			default:
+				index = d_axis.nearest(value);
+				break;
+		}
+
+		d_rewind_scale.set_value(d_axis.mark(index));
+
+		return true;
+	}
+
 	private void on_rewind_value_changed()
 	{
 		if (!d_rewinding || d_states.size == 0)
@@ -1666,16 +1715,12 @@ public class ReflogPaned : Gtk.Paned
 			return;
 		}
 
-		var index = (int)Math.round(d_rewind_scale.get_value());
+		var index = rewind_index();
 
-		if (index < 0)
+		if (d_rewind_scale.get_value() != d_axis.mark(index))
 		{
-			index = 0;
-		}
-
-		if (index >= d_states.size)
-		{
-			index = d_states.size - 1;
+			d_rewind_scale.set_value(d_axis.mark(index));
+			return;
 		}
 
 		d_plan.adopt(Timeline.plan_for(d_states[index], d_tips));
@@ -1692,6 +1737,11 @@ public class ReflogPaned : Gtk.Paned
 		return d_plan.is_empty()
 			? baseline_caption_text()
 			: _("Repository state after execution of the command");
+	}
+
+	private int rewind_index()
+	{
+		return d_axis.nearest(d_rewind_scale.get_value());
 	}
 
 	private void align_dial_controls()
@@ -1754,7 +1804,7 @@ public class ReflogPaned : Gtk.Paned
 				continue;
 			}
 
-			d_rewind_scale.add_mark(i,
+			d_rewind_scale.add_mark(d_axis.mark(i),
 			                        Gtk.PositionType.BOTTOM,
 			                        signpost ? d_states[i].when.format(format) : null);
 		}
@@ -1811,7 +1861,7 @@ public class ReflogPaned : Gtk.Paned
 
 		for (var i = 0; i < wanted; i++)
 		{
-			indices.add((d_states.size - 1) * i / (wanted - 1));
+			indices.add(d_axis.nearest(d_axis.upper * i / (wanted - 1)));
 		}
 
 		return indices;
@@ -1852,7 +1902,7 @@ public class ReflogPaned : Gtk.Paned
 
 	private void refresh_rewind_entry()
 	{
-		var index = (int)Math.round(d_rewind_scale.get_value());
+		var index = rewind_index();
 
 		d_rewind_entry.text = index >= 0 && index < d_states.size
 			? d_states[index].when.format(MOMENT_FORMAT)
@@ -1861,7 +1911,7 @@ public class ReflogPaned : Gtk.Paned
 
 	private string rewind_moment_text()
 	{
-		var index = (int)Math.round(d_rewind_scale.get_value());
+		var index = rewind_index();
 
 		if (index < 0 || index >= d_states.size)
 		{
@@ -1943,7 +1993,7 @@ public class ReflogPaned : Gtk.Paned
 			}
 		}
 
-		d_rewind_scale.set_value(index);
+		d_rewind_scale.set_value(d_axis.mark(index));
 	}
 
 	public void show_rewind_window()
@@ -1972,7 +2022,7 @@ public class ReflogPaned : Gtk.Paned
 
 	private void step_rewind(int delta)
 	{
-		d_rewind_scale.set_value(d_rewind_scale.get_value() + delta);
+		d_rewind_scale.set_value(d_axis.mark(rewind_index() + delta));
 	}
 
 	private void update_summary()
