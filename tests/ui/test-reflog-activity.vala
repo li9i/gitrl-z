@@ -142,7 +142,8 @@ private static void test_refs_panel_contents()
 
 		assert_true(ids.index_of("feature") < ids.index_of("main"));
 
-		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+		assert_cmpstr(paned.view, CompareOperator.EQ, "rewind");
+		assert_cmpint(paned.rewind_position, CompareOperator.GE, 0);
 
 		paned.destroy();
 		repo.remove();
@@ -265,6 +266,8 @@ private static void test_toggling_an_entry_builds_the_preview()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		assert_true(paned.toggle_entry(0));
 
 		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
@@ -290,6 +293,8 @@ private static void test_toggling_the_same_row_clears_the_plan()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		assert_true(paned.toggle_entry(0));
 		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
 
@@ -314,6 +319,8 @@ private static void test_two_branch_plan()
 	{
 		var repo = braided_repo();
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.toggle_entry(0));
 
@@ -374,6 +381,8 @@ private static void test_preview_moves_the_branch_and_drops_what_it_leaves()
 		var third = repo.commit("third");
 
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		var entries = paned.list.entries;
 		var index = -1;
@@ -480,7 +489,7 @@ private static void test_head_view_marks_the_row_the_session_opened_on()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
-		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+		assert_true(paned.select_ref("all"));
 		assert_cmpint(paned.list.entries.size, CompareOperator.GT, 1);
 
 		assert_true(paned.list.row_is_start_mark(0));
@@ -509,6 +518,8 @@ private static void test_start_mark_drifts_down_as_the_log_grows()
 		var second = repo.commit("second");
 
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.list.row_is_start_mark(0));
 
@@ -767,6 +778,65 @@ private static void test_rewind_off_clears_the_plan()
 	catch (Error e) { Test.fail_printf("fixture failed: %s", e.message); }
 }
 
+private static void test_rewind_keeps_its_place_across_a_reload()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		paned.set_rewind_position(0);
+
+		var moment = paned.rewind_moment;
+		var planned = paned.plan_size;
+
+		assert_cmpint(planned, CompareOperator.GT, 0);
+
+		repo.commit_at(3, "later work", "later.txt");
+		paned.reload();
+
+		assert_cmpstr(paned.rewind_moment, CompareOperator.EQ, moment);
+		assert_cmpint(paned.rewind_position, CompareOperator.EQ, 0);
+		assert_cmpint(paned.plan_size, CompareOperator.GT, 0);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_rewind_at_the_current_state_follows_a_new_commit()
+{
+	try
+	{
+		var repo = dated_repo();
+		var paned = activity_for(repo);
+
+		var states = paned.rewind_state_count;
+
+		paned.set_rewind_position(states - 1);
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 0);
+
+		repo.commit_at(3, "later work", "later.txt");
+		paned.reload();
+
+		assert_cmpint(paned.rewind_state_count, CompareOperator.GT, states);
+		assert_cmpint(paned.rewind_position, CompareOperator.EQ,
+		              paned.rewind_state_count - 1);
+		assert_cmpint(paned.plan_size, CompareOperator.EQ, 0);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_rewind_entry_snaps_to_the_state_in_force()
 {
 	try
@@ -952,6 +1022,8 @@ private static void test_reload_preserves_the_plan()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		assert_true(paned.toggle_entry(0));
 
 		var planned_command = paned.command;
@@ -979,6 +1051,8 @@ private static void test_reload_drops_a_stale_plan_entry()
 	{
 		var repo = braided_repo();
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.toggle_entry(0));
 		assert_true(paned.select_ref("feature"));
@@ -1153,6 +1227,8 @@ private static void test_copied_state_follows_the_clipboard()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		assert_true(paned.toggle_entry(0));
 		var one_branch = paned.command;
 		assert_false(paned.copied);
@@ -1196,6 +1272,8 @@ private static void test_copy_offers_the_command_to_the_clipboard_manager()
 	{
 		var repo = braided_repo();
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.toggle_entry(0));
 		assert_cmpstr(paned.command, CompareOperator.NE, "");
@@ -1241,6 +1319,8 @@ private static void test_uncommitted_warning()
 	{
 		var repo = braided_repo();
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.toggle_entry(0));
 		assert_true(paned.command.contains("reset --hard"));
@@ -1347,7 +1427,7 @@ private static void test_reflog_caption_names_the_log()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
-		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+		assert_true(paned.select_ref("all"));
 		assert_true("HEAD" in paned.reflog_caption);
 
 		assert_true(paned.select_ref("feature"));
@@ -1392,6 +1472,8 @@ private static void test_graph_caption_drops_the_name_for_many_branches()
 	{
 		var repo = braided_repo();
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.toggle_entry(0));
 		assert_true(paned.select_ref("feature"));
@@ -1480,6 +1562,8 @@ private static void test_branchless_row_is_not_togglable()
 
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		var branchless = -1;
 
 		for (var i = 0; i < paned.list.entries.size; i++)
@@ -1523,7 +1607,7 @@ private static void test_deleted_branch_offers_recreate()
 
 		var paned = activity_for(repo);
 
-		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+		assert_true(paned.select_ref("all"));
 
 		var index = -1;
 
@@ -1571,6 +1655,8 @@ private static void test_deleted_branch_row_is_tinted()
 		repo.delete_branch("recover");
 
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		var index = -1;
 
@@ -1689,6 +1775,8 @@ private static void test_graph_keeps_its_scroll_across_a_toggle()
 
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		var win = new Gtk.Window();
 		win.set_default_size(700, 950);
 		win.add(paned);
@@ -1791,6 +1879,8 @@ private static void test_keyboard_select_keeps_other_branches()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		assert_true(paned.toggle_entry(0));
 		assert_true(paned.select_ref("feature"));
 		assert_true(paned.toggle_entry(0));
@@ -1817,6 +1907,8 @@ private static void test_keyboard_select_never_deselects()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		assert_true(paned.select_entry(0));
 		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
 
@@ -1838,6 +1930,8 @@ private static void test_head_view_plain_select_replaces_the_plan()
 	{
 		var repo = braided_repo();
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.toggle_entry(0));
 		assert_true(paned.select_ref("feature"));
@@ -1867,6 +1961,8 @@ private static void test_head_view_click_deselects_the_same_row()
 		var repo = braided_repo();
 		var paned = activity_for(repo);
 
+		assert_true(paned.select_ref("all"));
+
 		assert_true(paned.click_entry(0));
 		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
 
@@ -1889,6 +1985,8 @@ private static void test_head_view_arrow_travel_never_deselects()
 	{
 		var repo = braided_repo();
 		var paned = activity_for(repo);
+
+		assert_true(paned.select_ref("all"));
 
 		assert_true(paned.select_entry(0));
 		assert_cmpint(paned.plan_size, CompareOperator.EQ, 1);
@@ -1951,7 +2049,7 @@ private static void test_update_refs_row_moves_its_own_branch()
 
 		var paned = activity_for(repo);
 
-		assert_cmpstr(paned.view, CompareOperator.EQ, "all");
+		assert_true(paned.select_ref("all"));
 
 		var index = -1;
 
@@ -2038,6 +2136,10 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/rewind-removes-later-branch", test_rewind_removes_a_branch_born_later);
 	Test.add_func("/gitrlz/activity/rewind-keeps-branch-in-place", test_rewind_keeps_a_branch_already_in_place);
 	Test.add_func("/gitrlz/activity/rewind-off-clears", test_rewind_off_clears_the_plan);
+	Test.add_func("/gitrlz/activity/rewind-keeps-its-place-on-reload",
+	              test_rewind_keeps_its_place_across_a_reload);
+	Test.add_func("/gitrlz/activity/rewind-at-now-follows-a-commit",
+	              test_rewind_at_the_current_state_follows_a_new_commit);
 	Test.add_func("/gitrlz/activity/rewind-entry-snaps", test_rewind_entry_snaps_to_the_state_in_force);
 	Test.add_func("/gitrlz/activity/rewind-entry-nonsense", test_rewind_entry_ignores_nonsense);
 	Test.add_func("/gitrlz/activity/rewind-entry-limit", test_entry_limit_shortens_the_dial);

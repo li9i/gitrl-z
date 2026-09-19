@@ -93,7 +93,7 @@ public class ReflogPaned : Gtk.Paned
 	private Settings d_interface_settings;
 	private Monitor d_monitor;
 
-	private string d_view = "all";
+	private string d_view = "rewind";
 
 	private Gee.List<string> d_branches;
 	private Gee.Map<string, Ggit.OId> d_tips;
@@ -614,9 +614,13 @@ public class ReflogPaned : Gtk.Paned
 		prune_plan();
 
 		build_refs_list(d_view);
+
+		var entering_rewind = d_view == "rewind" && !d_rewinding;
+
+		set_rewind_visible(d_view == "rewind");
 		load_reflog();
 
-		if (d_rewinding)
+		if (d_rewinding && !entering_rewind)
 		{
 			load_timeline();
 		}
@@ -1601,8 +1605,22 @@ public class ReflogPaned : Gtk.Paned
 		on_rewind_entry_activate();
 	}
 
+	private DateTime? held_moment()
+	{
+		if (!d_rewinding || d_states.size == 0)
+		{
+			return null;
+		}
+
+		var index = rewind_index();
+
+		return index >= 0 && index < d_states.size - 1 ? d_states[index].when : null;
+	}
+
 	private void load_timeline()
 	{
+		var held = held_moment();
+
 		d_states = d_repository != null
 			? within_limits(Timeline.read(d_repository, d_branches))
 			: new Gee.ArrayList<TimelineState>();
@@ -1614,7 +1632,9 @@ public class ReflogPaned : Gtk.Paned
 
 		add_dial_marks();
 
-		d_rewind_scale.set_value(d_rewind_adjustment.upper);
+		d_rewind_scale.set_value(held != null
+			? d_axis.mark(index_at(held))
+			: d_rewind_adjustment.upper);
 		d_rewind.sensitive = d_states.size > 1;
 
 		if (d_states.size == 0)
@@ -1981,7 +2001,7 @@ public class ReflogPaned : Gtk.Paned
 		return string.joinv(", ", parts) + ".";
 	}
 
-	private void seek_rewind_to(DateTime when)
+	private int index_at(DateTime when)
 	{
 		var index = 0;
 
@@ -1993,7 +2013,12 @@ public class ReflogPaned : Gtk.Paned
 			}
 		}
 
-		d_rewind_scale.set_value(d_axis.mark(index));
+		return index;
+	}
+
+	private void seek_rewind_to(DateTime when)
+	{
+		d_rewind_scale.set_value(d_axis.mark(index_at(when)));
 	}
 
 	public void show_rewind_window()
