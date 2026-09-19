@@ -108,6 +108,8 @@ public class ReflogPaned : Gtk.Paned
 
 	private ResetPlan d_plan;
 
+	private Gtk.Menu? d_menu;
+
 	private HashTable<Ggit.OId, GLib.SList<Gitg.Ref>> d_preview_labels;
 
 	private int d_saved_top_row = -1;
@@ -413,9 +415,24 @@ public class ReflogPaned : Gtk.Paned
 		clipboard.store();
 	}
 
-	private void popup_commit_menu(Gtk.Widget parent, Ggit.OId id, Gdk.EventButton event)
+	private Gtk.Menu menu_for(Gtk.Widget parent)
 	{
+		if (d_menu != null)
+		{
+			d_menu.destroy();
+		}
+
 		var menu = new Gtk.Menu();
+		menu.attach_to_widget(parent, null);
+
+		d_menu = menu;
+
+		return menu;
+	}
+
+	private Gtk.Menu commit_menu(Gtk.Widget parent, Ggit.OId id, string? branch)
+	{
+		var menu = menu_for(parent);
 		var commit = commit_at(id);
 
 		if (commit != null)
@@ -437,14 +454,34 @@ public class ReflogPaned : Gtk.Paned
 
 		menu.append(copy);
 
-		menu.attach_to_widget(parent, null);
+		if (branch != null)
+		{
+			var name = new Gtk.MenuItem.with_mnemonic(_("Copy _name"));
+
+			name.activate.connect(() => {
+				copy_to_clipboard(branch);
+			});
+
+			menu.append(name);
+		}
+
+		return menu;
+	}
+
+	private void popup_commit_menu(Gtk.Widget parent,
+	                               Ggit.OId id,
+	                               string? branch,
+	                               Gdk.EventButton event)
+	{
+		var menu = commit_menu(parent, id, branch);
+
 		menu.show_all();
 		menu.popup_at_pointer(event);
 	}
 
 	private void popup_ref_menu(Gtk.Widget parent, string name, Gdk.EventButton event)
 	{
-		var menu = new Gtk.Menu();
+		var menu = menu_for(parent);
 
 		var copy = new Gtk.MenuItem.with_mnemonic(_("_Copy name"));
 
@@ -454,7 +491,6 @@ public class ReflogPaned : Gtk.Paned
 
 		menu.append(copy);
 
-		menu.attach_to_widget(parent, null);
 		menu.show_all();
 		menu.popup_at_pointer(event);
 	}
@@ -1013,6 +1049,44 @@ public class ReflogPaned : Gtk.Paned
 		return fold_entry(index, arrow_fold());
 	}
 
+	public uint attached_menus
+	{
+		get { return Gtk.Menu.get_for_attach_widget(d_reflog_list).length(); }
+	}
+
+	public string[] entry_menu_labels(int index, bool on_pill)
+	{
+		var labels = new string[0];
+		var path = d_list.view_path_for(index);
+
+		if (path == null)
+		{
+			return labels;
+		}
+
+		var entry = d_list.entry_at(path);
+
+		if (entry == null || entry.new_id == null)
+		{
+			return labels;
+		}
+
+		var menu = commit_menu(d_reflog_list, entry.new_id,
+		                       on_pill ? d_list.branch_for_index(index) : null);
+
+		foreach (var child in menu.get_children())
+		{
+			var item = child as Gtk.MenuItem;
+
+			if (item != null)
+			{
+				labels += item.label;
+			}
+		}
+
+		return labels;
+	}
+
 	public bool click_entry(int index)
 	{
 		return fold_entry(index, click_fold(false));
@@ -1041,8 +1115,13 @@ public class ReflogPaned : Gtk.Paned
 		}
 
 		Gtk.TreePath? path;
+		Gtk.TreeViewColumn? column;
+		int cell_x;
+		int cell_y;
 
-		if (!d_reflog_list.get_path_at_pos((int)event.x, (int)event.y, out path, null, null, null))
+		if (!d_reflog_list.get_path_at_pos((int)event.x, (int)event.y,
+		                                   out path, out column,
+		                                   out cell_x, out cell_y))
 		{
 			return false;
 		}
@@ -1056,7 +1135,8 @@ public class ReflogPaned : Gtk.Paned
 				return false;
 			}
 
-			popup_commit_menu(d_reflog_list, entry.new_id, event);
+			popup_commit_menu(d_reflog_list, entry.new_id,
+			                  d_list.branch_pill_at(column, path, cell_x), event);
 
 			return true;
 		}
@@ -1117,7 +1197,7 @@ public class ReflogPaned : Gtk.Paned
 		}
 		else
 		{
-			popup_commit_menu(d_commit_list_view, commit.get_id(), event);
+			popup_commit_menu(d_commit_list_view, commit.get_id(), null, event);
 		}
 
 		return true;

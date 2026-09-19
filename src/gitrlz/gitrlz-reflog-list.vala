@@ -604,6 +604,57 @@ public class ReflogList : Object
 		return index >= 0 && index < d_branches.length ? d_branches[index] : null;
 	}
 
+	public Gtk.TreeViewColumn branch_column
+	{
+		get { return d_branch_column; }
+	}
+
+	public string? branch_pill_at(Gtk.TreeViewColumn? column,
+	                              Gtk.TreePath path,
+	                              int cell_x)
+	{
+		if (column != d_branch_column)
+		{
+			return null;
+		}
+
+		var index = store_index(path);
+		var branch = branch_for_index(index);
+
+		if (branch == null || branch == "" || colour_for_index(index) < 0)
+		{
+			return null;
+		}
+
+		d_branch_renderer.branch = branch;
+
+		int minimum;
+		int natural;
+		d_branch_renderer.get_preferred_width(d_view, out minimum, out natural);
+
+		return cell_x >= 0 && cell_x < minimum ? branch : null;
+	}
+
+	private int colour_for_index(int index)
+	{
+		if (index < 0)
+		{
+			return -1;
+		}
+
+		Gtk.TreeIter iter;
+
+		if (!d_store.get_iter(out iter, new Gtk.TreePath.from_indices(index)))
+		{
+			return -1;
+		}
+
+		Value colour;
+		d_store.get_value(iter, ReflogColumn.COLOUR, out colour);
+
+		return (int)colour;
+	}
+
 	public string? tooltip_at(Gtk.TreePath path)
 	{
 		if (d_operations == null)

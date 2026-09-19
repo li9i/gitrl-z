@@ -1549,6 +1549,95 @@ private static void test_stash_offers_apply_not_reset()
 	}
 }
 
+private static void test_the_row_menu_replaces_the_one_before_it()
+{
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		assert_cmpint(paned.entry_menu_labels(0, true).length, CompareOperator.GT, 0);
+		assert_cmpuint(paned.attached_menus, CompareOperator.EQ, 1);
+
+		assert_cmpint(paned.entry_menu_labels(0, true).length, CompareOperator.GT, 0);
+		assert_cmpuint(paned.attached_menus, CompareOperator.EQ, 1);
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_the_pill_menu_offers_the_branch_name()
+{
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		var on_pill = paned.entry_menu_labels(0, true);
+
+		assert_true(has_label(on_pill, "_Show diff"));
+		assert_true(has_label(on_pill, "_Copy SHA"));
+		assert_true(has_label(on_pill, "Copy _name"));
+
+		var off_pill = paned.entry_menu_labels(0, false);
+
+		assert_true(has_label(off_pill, "_Copy SHA"));
+		assert_false(has_label(off_pill, "Copy _name"));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_branch_pill_gives_its_name()
+{
+	try
+	{
+		var repo = braided_repo();
+		var paned = activity_for(repo);
+
+		var index = -1;
+
+		for (var i = 0; i < paned.list.entries.size; i++)
+		{
+			if (paned.list.branch_for_index(i) != null)
+			{
+				index = i;
+				break;
+			}
+		}
+
+		assert_cmpint(index, CompareOperator.GE, 0);
+
+		var path = paned.list.view_path_for(index);
+		assert_nonnull(path);
+
+		var branch = paned.list.branch_for_index(index);
+
+		assert_cmpstr(paned.list.branch_pill_at(paned.list.branch_column, path, 2),
+		              CompareOperator.EQ, branch);
+
+		assert_null(paned.list.branch_pill_at(paned.list.branch_column, path, 10000));
+		assert_null(paned.list.branch_pill_at(paned.list.date_column, path, 2));
+
+		paned.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_branchless_row_is_not_togglable()
 {
 	try
@@ -2172,6 +2261,12 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/graph-caption-many", test_graph_caption_drops_the_name_for_many_branches);
 	Test.add_func("/gitrlz/activity/graph-caption-hidden", test_graph_caption_hidden_without_a_graph);
 	Test.add_func("/gitrlz/activity/stash-offers-apply", test_stash_offers_apply_not_reset);
+	Test.add_func("/gitrlz/activity/row-menu-replaces-the-last",
+	              test_the_row_menu_replaces_the_one_before_it);
+	Test.add_func("/gitrlz/activity/pill-menu-offers-the-name",
+	              test_the_pill_menu_offers_the_branch_name);
+	Test.add_func("/gitrlz/activity/branch-pill-gives-its-name",
+	              test_branch_pill_gives_its_name);
 	Test.add_func("/gitrlz/activity/branchless-not-togglable", test_branchless_row_is_not_togglable);
 	Test.add_func("/gitrlz/activity/deleted-branch-recreate", test_deleted_branch_offers_recreate);
 	Test.add_func("/gitrlz/activity/deleted-branch-tinted", test_deleted_branch_row_is_tinted);
