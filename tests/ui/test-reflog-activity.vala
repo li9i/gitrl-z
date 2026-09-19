@@ -837,7 +837,7 @@ private static void test_rewind_at_the_current_state_follows_a_new_commit()
 	}
 }
 
-private static void test_rewind_row_offers_the_change_it_makes()
+private static void test_rewind_row_offers_both_of_its_diffs()
 {
 	try
 	{
@@ -864,6 +864,15 @@ private static void test_rewind_row_offers_the_change_it_makes()
 		                                     plan, "main",
 		                                     "git reset --hard %s".printf(first));
 
+		var landed = "";
+
+		window.show_landing.connect((after) => {
+			landed = after;
+		});
+
+		assert_true(window.open_landing("main"));
+		assert_cmpstr(landed, CompareOperator.EQ, first);
+
 		var seen_branch = "";
 		var seen_now = "";
 		var seen_after = "";
@@ -874,13 +883,14 @@ private static void test_rewind_row_offers_the_change_it_makes()
 			seen_after = after;
 		});
 
-		assert_true(window.activate_branch("main"));
+		assert_true(window.open_change("main"));
 
 		assert_cmpstr(seen_branch, CompareOperator.EQ, "main");
 		assert_cmpstr(seen_now, CompareOperator.EQ, tips["main"].to_string());
 		assert_cmpstr(seen_after, CompareOperator.EQ, first);
 
-		assert_false(window.activate_branch("quiet"));
+		assert_false(window.open_landing("quiet"));
+		assert_false(window.open_change("quiet"));
 
 		window.destroy();
 		parent.destroy();
@@ -2280,8 +2290,8 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/rewind-removes-later-branch", test_rewind_removes_a_branch_born_later);
 	Test.add_func("/gitrlz/activity/rewind-keeps-branch-in-place", test_rewind_keeps_a_branch_already_in_place);
 	Test.add_func("/gitrlz/activity/rewind-off-clears", test_rewind_off_clears_the_plan);
-	Test.add_func("/gitrlz/activity/rewind-row-offers-its-change",
-	              test_rewind_row_offers_the_change_it_makes);
+	Test.add_func("/gitrlz/activity/rewind-row-offers-both-diffs",
+	              test_rewind_row_offers_both_of_its_diffs);
 	Test.add_func("/gitrlz/activity/rewind-keeps-its-place-on-reload",
 	              test_rewind_keeps_its_place_across_a_reload);
 	Test.add_func("/gitrlz/activity/rewind-at-now-follows-a-commit",

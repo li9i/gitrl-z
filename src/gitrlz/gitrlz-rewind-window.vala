@@ -91,7 +91,7 @@ public class RewindWindow : Gtk.Dialog
 		show_all();
 	}
 
-	public bool activate_branch(string branch)
+	public bool open_change(string branch)
 	{
 		if (!d_moves.has_key(branch))
 		{
@@ -101,6 +101,18 @@ public class RewindWindow : Gtk.Dialog
 		var move = d_moves[branch];
 
 		show_change(move.branch, move.now, move.after);
+
+		return true;
+	}
+
+	public bool open_landing(string branch)
+	{
+		if (!d_moves.has_key(branch))
+		{
+			return false;
+		}
+
+		show_landing(d_moves[branch].after);
 
 		return true;
 	}
@@ -242,14 +254,14 @@ public class RewindWindow : Gtk.Dialog
 
 		var box = new Gtk.EventBox();
 		box.visible_window = false;
-		box.tooltip_text = _("Double click to see what the rewind changes");
+		box.tooltip_text = _("Double click to see the commit this branch lands on");
 		box.add(row);
 
 		box.button_press_event.connect((widget, event) => {
 			if (event.type == Gdk.EventType.@2BUTTON_PRESS
 			    && event.button == Gdk.BUTTON_PRIMARY)
 			{
-				return activate_branch(move.branch);
+				return open_landing(move.branch);
 			}
 
 			if (event.type == Gdk.EventType.BUTTON_PRESS
@@ -280,21 +292,21 @@ public class RewindWindow : Gtk.Dialog
 
 		d_menu = menu;
 
-		var change = new Gtk.MenuItem.with_mnemonic(_("_Show what the rewind changes"));
-
-		change.activate.connect(() => {
-			show_change(move.branch, move.now, move.after);
-		});
-
-		menu.append(change);
-
-		var landing = new Gtk.MenuItem.with_mnemonic(_("Show the _commit it lands on"));
+		var landing = new Gtk.MenuItem.with_mnemonic(_("_Show the commit it lands on"));
 
 		landing.activate.connect(() => {
-			show_landing(move.after);
+			open_landing(move.branch);
 		});
 
 		menu.append(landing);
+
+		var change = new Gtk.MenuItem.with_mnemonic(_("Show _every change the rewind makes"));
+
+		change.activate.connect(() => {
+			open_change(move.branch);
+		});
+
+		menu.append(change);
 
 		menu.show_all();
 		menu.popup_at_pointer(event);

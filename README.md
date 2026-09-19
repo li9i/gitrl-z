@@ -23,7 +23,7 @@ The stops sit where the moments fall in time, so an hour of work reads as a clus
 
 ![The dial moved back through the moments the repository passed through, every branch moving with it](docs/screenshots/demo-rewind.gif)
 
-Button **Rewind to this point** lists where each branch will land and the commands that will take the repository there. Double click a branch that moves and you get the whole move as a diff: everything between where it stands now and where it lands. You see what the rewind costs you and what it gives back, file by file. The second mouse button offers that same diff, and beside it the landing commit on its own, which shows only what that one commit changed.
+Button **Rewind to this point** lists where each branch will land and the commands that will take the repository there. Double click a branch that moves and you get the commit it lands on, so you can check you picked the right one. The second mouse button offers that, and beside it the diff of the whole move. That is everything between where the branch stands now and where it lands. You see what the rewind costs you and what it gives back, file by file.
 
 ## What it gets back
 
