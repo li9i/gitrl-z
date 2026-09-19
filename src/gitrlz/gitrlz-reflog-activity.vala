@@ -110,6 +110,8 @@ public class ReflogPaned : Gtk.Paned
 
 	private Gtk.Menu? d_menu;
 
+	private RewindWindow? d_rewind_window;
+
 	private HashTable<Ggit.OId, GLib.SList<Gitg.Ref>> d_preview_labels;
 
 	private int d_saved_top_row = -1;
@@ -257,6 +259,11 @@ public class ReflogPaned : Gtk.Paned
 			if (d_diff_window != null)
 			{
 				d_diff_window.destroy();
+			}
+
+			if (d_rewind_window != null)
+			{
+				d_rewind_window.destroy();
 			}
 
 			d_opened_at = d_repository != null
@@ -1264,13 +1271,13 @@ public class ReflogPaned : Gtk.Paned
 		return reference.parsed_name.shortname;
 	}
 
-	private void show_diff(Ggit.Commit commit)
+	private Ggit.Commit? commit_at_hex(string hex)
 	{
-		if (d_repository == null)
-		{
-			return;
-		}
+		return commit_at(new Ggit.OId.from_string(hex));
+	}
 
+	private DiffWindow diff_window()
+	{
 		if (d_diff_window == null)
 		{
 			d_diff_window = new DiffWindow(get_toplevel() as Gtk.Window);
@@ -1279,8 +1286,51 @@ public class ReflogPaned : Gtk.Paned
 			});
 		}
 
-		d_diff_window.show_commit(d_repository, commit);
-		d_diff_window.present();
+		return d_diff_window;
+	}
+
+	private void show_change_diff(string branch, string now, string after)
+	{
+		if (d_repository == null)
+		{
+			return;
+		}
+
+		var from = commit_at_hex(now);
+		var to = commit_at_hex(after);
+
+		if (from == null || to == null)
+		{
+			return;
+		}
+
+		var window = diff_window();
+
+		window.show_change(d_repository, from, to, branch);
+		window.present();
+	}
+
+	private void show_diff(Ggit.Commit commit)
+	{
+		if (d_repository == null)
+		{
+			return;
+		}
+
+		var window = diff_window();
+
+		window.show_commit(d_repository, commit);
+		window.present();
+	}
+
+	private void show_landing_diff(string after)
+	{
+		var commit = commit_at_hex(after);
+
+		if (commit != null)
+		{
+			show_diff(commit);
+		}
 	}
 
 	private bool on_key_press(Gdk.EventKey event)
@@ -2122,6 +2172,16 @@ public class ReflogPaned : Gtk.Paned
 		                              d_plan,
 		                              d_current_branch,
 		                              d_command);
+
+		window.show_change.connect(show_change_diff);
+		window.show_landing.connect(show_landing_diff);
+
+		window.destroy.connect(() => {
+			d_rewind_window = null;
+		});
+
+		d_rewind_window = window;
+
 		window.present();
 	}
 

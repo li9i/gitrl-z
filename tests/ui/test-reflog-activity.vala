@@ -837,6 +837,61 @@ private static void test_rewind_at_the_current_state_follows_a_new_commit()
 	}
 }
 
+private static void test_rewind_row_offers_the_change_it_makes()
+{
+	try
+	{
+		var repo = Repo.create();
+
+		var first = repo.commit("first");
+		repo.commit("second");
+		repo.branch("quiet");
+
+		var location = Gitrlz.Application.discover_repository(repo.path);
+		assert_nonnull(location);
+
+		var repository = Gitrlz.Repository.open(location);
+
+		var branches = Gitrlz.Repository.list_branches(repository);
+		var tips = Gitrlz.Repository.branch_tips(repository);
+
+		var plan = new Gitrlz.ResetPlan();
+		plan.set_target("main", new Ggit.OId.from_string(first));
+
+		var parent = new Gtk.Window();
+
+		var window = new Gitrlz.RewindWindow(parent, "a moment", branches, tips,
+		                                     plan, "main",
+		                                     "git reset --hard %s".printf(first));
+
+		var seen_branch = "";
+		var seen_now = "";
+		var seen_after = "";
+
+		window.show_change.connect((branch, now, after) => {
+			seen_branch = branch;
+			seen_now = now;
+			seen_after = after;
+		});
+
+		assert_true(window.activate_branch("main"));
+
+		assert_cmpstr(seen_branch, CompareOperator.EQ, "main");
+		assert_cmpstr(seen_now, CompareOperator.EQ, tips["main"].to_string());
+		assert_cmpstr(seen_after, CompareOperator.EQ, first);
+
+		assert_false(window.activate_branch("quiet"));
+
+		window.destroy();
+		parent.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
 private static void test_rewind_entry_snaps_to_the_state_in_force()
 {
 	try
@@ -2225,6 +2280,8 @@ public static int main(string[] args)
 	Test.add_func("/gitrlz/activity/rewind-removes-later-branch", test_rewind_removes_a_branch_born_later);
 	Test.add_func("/gitrlz/activity/rewind-keeps-branch-in-place", test_rewind_keeps_a_branch_already_in_place);
 	Test.add_func("/gitrlz/activity/rewind-off-clears", test_rewind_off_clears_the_plan);
+	Test.add_func("/gitrlz/activity/rewind-row-offers-its-change",
+	              test_rewind_row_offers_the_change_it_makes);
 	Test.add_func("/gitrlz/activity/rewind-keeps-its-place-on-reload",
 	              test_rewind_keeps_its_place_across_a_reload);
 	Test.add_func("/gitrlz/activity/rewind-at-now-follows-a-commit",

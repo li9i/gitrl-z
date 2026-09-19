@@ -26,6 +26,8 @@ public class DiffWindow : Gtk.Window
 	private Settings d_state_settings;
 	private Gtk.RadioButton d_split_button;
 	private Gtk.RadioButton d_unified_button;
+	private Ggit.Commit? d_from;
+	private Ggit.Commit? d_to;
 
 	private const string SPLIT = "split";
 	private const string UNIFIED = "unified";
@@ -65,6 +67,8 @@ public class DiffWindow : Gtk.Window
 
 		bind_settings();
 
+		d_view.options_changed.connect(refresh_change);
+
 		d_header.pack_end(renderer_switch());
 
 		add(d_view);
@@ -88,19 +92,44 @@ public class DiffWindow : Gtk.Window
 		show_all();
 	}
 
+	public void show_change(Gitg.Repository repository,
+	                        Ggit.Commit from,
+	                        Ggit.Commit to,
+	                        string subtitle)
+	{
+		d_header.title = "%s -> %s".printf(abbreviated(from), abbreviated(to));
+		d_header.subtitle = subtitle;
+
+		d_from = from;
+		d_to = to;
+
+		d_view.repository = repository;
+
+		refresh_change();
+	}
+
 	public void show_commit(Gitg.Repository repository, Ggit.Commit commit)
 	{
-		var sha = commit.get_id().to_string();
 		var subject = commit.get_subject();
 
-		d_header.title = sha.length > TITLE_SHA_LENGTH
-			? sha.substring(0, TITLE_SHA_LENGTH)
-			: sha;
+		d_from = null;
+		d_to = null;
+
+		d_header.title = abbreviated(commit);
 		d_header.subtitle = subject != null ? subject : "";
 
 		d_view.repository = repository;
 
 		d_view.commit = commit as Gitg.Commit;
+	}
+
+	private static string abbreviated(Ggit.Commit commit)
+	{
+		var sha = commit.get_id().to_string();
+
+		return sha.length > TITLE_SHA_LENGTH
+			? sha.substring(0, TITLE_SHA_LENGTH)
+			: sha;
 	}
 
 	private void bind_settings()
@@ -122,6 +151,29 @@ public class DiffWindow : Gtk.Window
 		                          SettingsBindFlags.GET | SettingsBindFlags.SET);
 		d_interface_settings.bind("enable-diff-highlighting", d_view, "highlight",
 		                          SettingsBindFlags.GET | SettingsBindFlags.SET);
+	}
+
+	private void refresh_change()
+	{
+		if (d_from == null || d_to == null || d_view.repository == null)
+		{
+			return;
+		}
+
+		try
+		{
+			d_view.diff = new Ggit.Diff.tree_to_tree(d_view.repository,
+			                                         d_from.get_tree(),
+			                                         d_to.get_tree(),
+			                                         d_view.options);
+		}
+		catch (Error e)
+		{
+			warning("cannot diff %s against %s: %s",
+			        abbreviated(d_from), abbreviated(d_to), e.message);
+
+			d_view.diff = null;
+		}
 	}
 
 	private Gtk.Widget renderer_switch()

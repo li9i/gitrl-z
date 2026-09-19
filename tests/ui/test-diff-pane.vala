@@ -332,12 +332,35 @@ private static void wait_for(DiffCondition cond, uint timeout_ms = 5000)
 	loop.run();
 }
 
-private static Gitrlz.DiffWindow window_for(Repo repo, string sha, int expected) throws Error
+private static Gitg.Repository repository_for(Repo repo) throws Error
 {
 	var location = Gitrlz.Application.discover_repository(repo.path);
 	assert_nonnull(location);
 
-	var repository = Gitrlz.Repository.open(location);
+	return Gitrlz.Repository.open(location);
+}
+
+private static Gitrlz.DiffWindow change_window_for(Repo repo,
+                                                   string from,
+                                                   string to,
+                                                   int expected) throws Error
+{
+	var repository = repository_for(repo);
+	var window = new Gitrlz.DiffWindow(null);
+
+	window.show_change(repository,
+	                   repository.lookup_commit(new Ggit.OId.from_string(from)),
+	                   repository.lookup_commit(new Ggit.OId.from_string(to)),
+	                   "main");
+
+	wait_for(() => file_sections(window.view).size >= expected);
+
+	return window;
+}
+
+private static Gitrlz.DiffWindow window_for(Repo repo, string sha, int expected) throws Error
+{
+	var repository = repository_for(repo);
 	var window = new Gitrlz.DiffWindow(null);
 
 	window.show_commit(repository, repository.lookup_commit(new Ggit.OId.from_string(sha)));
@@ -372,6 +395,73 @@ private static void test_a_section_per_changed_file()
 		assert_cmpint(sections.size, CompareOperator.EQ, 2);
 		assert_cmpstr(section_path(sections[0]), CompareOperator.EQ, "a.txt");
 		assert_cmpstr(section_path(sections[1]), CompareOperator.EQ, "b.txt");
+
+		window.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_a_change_shows_the_files_between_two_commits()
+{
+	try
+	{
+		var repo = Repo.create();
+
+		var from = repo.commit("first", "a.txt", "one\n");
+		repo.commit("second", "b.txt", "two\n");
+		var to = repo.commit("third", "c.txt", "three\n");
+
+		var window = change_window_for(repo, from, to, 2);
+		var sections = file_sections(window.view);
+
+		assert_cmpint(sections.size, CompareOperator.EQ, 2);
+		assert_cmpstr(section_path(sections[0]), CompareOperator.EQ, "b.txt");
+		assert_cmpstr(section_path(sections[1]), CompareOperator.EQ, "c.txt");
+
+		window.destroy();
+		repo.remove();
+	}
+	catch (Error e)
+	{
+		Test.fail_printf("fixture failed: %s", e.message);
+	}
+}
+
+private static void test_the_context_lines_change_what_a_change_holds()
+{
+	try
+	{
+		var repo = Repo.create();
+
+		var from = repo.commit("first", "a.txt", "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n");
+
+		var to = repo.commit("change the middle",
+		                     "a.txt", "1\n2\n3\n4\n5\n6\nsix and a half\n7\n8\n9\n10\n11\n12\n");
+
+		var window = change_window_for(repo, from, to, 1);
+
+		window.view.context_lines = 3;
+
+		expand_all(window.view);
+
+		wait_for(() => section_line_count(file_sections(window.view)[0]) > 0);
+
+		var with_three = section_line_count(file_sections(window.view)[0]);
+		assert_cmpint(with_three, CompareOperator.GT, 0);
+
+		window.view.context_lines = 6;
+
+		wait_for(() => file_sections(window.view).size == 1
+		               && section_line_count(file_sections(window.view)[0]) > with_three);
+
+		assert_cmpint(section_line_count(file_sections(window.view)[0]),
+		              CompareOperator.GT, with_three);
+
+		window.view.context_lines = 3;
 
 		window.destroy();
 		repo.remove();
@@ -885,6 +975,10 @@ public static int main(string[] args)
 
 	Test.add_func("/gitrlz/diff-pane/a-section-per-changed-file",
 	              test_a_section_per_changed_file);
+	Test.add_func("/gitrlz/diff-pane/a-change-spans-two-commits",
+	              test_a_change_shows_the_files_between_two_commits);
+	Test.add_func("/gitrlz/diff-pane/a-change-follows-the-context-lines",
+	              test_the_context_lines_change_what_a_change_holds);
 	Test.add_func("/gitrlz/diff-pane/stat-badge-counts",
 	              test_the_stat_badge_counts_the_changed_lines);
 	Test.add_func("/gitrlz/diff-pane/sections-start-folded",

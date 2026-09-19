@@ -20,10 +20,32 @@
 namespace Gitrlz
 {
 
+private class RewindMove
+{
+	public string branch;
+	public string now;
+	public string after;
+
+	public RewindMove(string branch, string now, string after)
+	{
+		this.branch = branch;
+		this.now = now;
+		this.after = after;
+	}
+}
+
 public class RewindWindow : Gtk.Dialog
 {
 	private Gtk.Frame d_banner;
 	private string d_command;
+	private Gee.Map<string, RewindMove> d_moves;
+	private Gtk.Menu? d_menu;
+	private Gtk.SizeGroup d_branch_group;
+	private Gtk.SizeGroup d_now_group;
+	private Gtk.SizeGroup d_after_group;
+
+	public signal void show_change(string branch, string now, string after);
+	public signal void show_landing(string after);
 
 	public RewindWindow(Gtk.Window parent,
 	                    string moment,
@@ -39,6 +61,11 @@ public class RewindWindow : Gtk.Dialog
 		       destroy_with_parent: true);
 
 		d_command = command;
+		d_moves = new Gee.HashMap<string, RewindMove>();
+
+		d_branch_group = new Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL);
+		d_now_group = new Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL);
+		d_after_group = new Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL);
 
 		get_style_context().add_class("gitrlz-dialog");
 
@@ -62,6 +89,20 @@ public class RewindWindow : Gtk.Dialog
 		resizable = true;
 		set_default_size(760, 560);
 		show_all();
+	}
+
+	public bool activate_branch(string branch)
+	{
+		if (!d_moves.has_key(branch))
+		{
+			return false;
+		}
+
+		var move = d_moves[branch];
+
+		show_change(move.branch, move.now, move.after);
+
+		return true;
 	}
 
 	public static string after_text(string branch,
@@ -125,41 +166,38 @@ public class RewindWindow : Gtk.Dialog
 	                               ResetPlan plan,
 	                               string? current_branch)
 	{
-		var grid = new Gtk.Grid();
-		grid.column_spacing = 16;
-		grid.row_spacing = 4;
-		grid.margin = 8;
+		var rows = new Gtk.Box(Gtk.Orientation.VERTICAL, 4);
+		rows.margin = 8;
 
-		grid.attach(heading(_("Branch")), 0, 0, 1, 1);
-		grid.attach(heading(_("Now")), 1, 0, 1, 1);
-		grid.attach(heading(_("After")), 2, 0, 1, 1);
-
-		var row = 1;
+		rows.add(row_box(heading(_("Branch")), heading(_("Now")), heading(_("After"))));
 
 		foreach (var branch in branches)
 		{
-			grid.attach(cell(branch, false), 0, row, 1, 1);
-			grid.attach(cell(tips.has_key(branch) ? abbreviate(tips[branch]) : "", true),
-			            1, row, 1, 1);
+			var now = tips.has_key(branch) ? abbreviate(tips[branch]) : "";
+			var target = plan.target_for(branch);
 
-			var after = after_text(branch, tips, plan, current_branch);
-			var widget = cell(after, plan.target_for(branch) != null);
+			var after = cell(after_text(branch, tips, plan, current_branch),
+			                 target != null);
 
 			if (plan.is_deleted(branch) && branch != current_branch)
 			{
-				widget.get_style_context().add_class("gitrlz-removal");
+				after.get_style_context().add_class("gitrlz-removal");
 			}
 
-			grid.attach(widget, 2, row, 1, 1);
+			var row = row_box(cell(branch, false), cell(now, true), after);
 
-			row++;
+			var moves = target != null
+			            && tips.has_key(branch)
+			            && !tips[branch].equal(target);
+
+			rows.add(moves ? movable_row(branch, tips[branch], target, row) : row);
 		}
 
 		var scrolled = new Gtk.ScrolledWindow(null, null);
 		scrolled.hexpand = true;
 		scrolled.vexpand = true;
 		scrolled.shadow_type = Gtk.ShadowType.IN;
-		scrolled.add(grid);
+		scrolled.add(rows);
 
 		var title = new Gtk.Label(_("Where the branches move"));
 		title.xalign = 0;
@@ -191,6 +229,89 @@ public class RewindWindow : Gtk.Dialog
 		label.get_style_context().add_class("gitrlz-caption");
 
 		return label;
+	}
+
+	private Gtk.Widget movable_row(string branch,
+	                               Ggit.OId now,
+	                               Ggit.OId after,
+	                               Gtk.Widget row)
+	{
+		var move = new RewindMove(branch, now.to_string(), after.to_string());
+
+		d_moves[branch] = move;
+
+		var box = new Gtk.EventBox();
+		box.visible_window = false;
+		box.tooltip_text = _("Double click to see what the rewind changes");
+		box.add(row);
+
+		box.button_press_event.connect((widget, event) => {
+			if (event.type == Gdk.EventType.@2BUTTON_PRESS
+			    && event.button == Gdk.BUTTON_PRIMARY)
+			{
+				return activate_branch(move.branch);
+			}
+
+			if (event.type == Gdk.EventType.BUTTON_PRESS
+			    && event.button == Gdk.BUTTON_SECONDARY)
+			{
+				popup_row_menu(widget, move, event);
+
+				return true;
+			}
+
+			return false;
+		});
+
+		return box;
+	}
+
+	private void popup_row_menu(Gtk.Widget parent,
+	                            RewindMove move,
+	                            Gdk.EventButton event)
+	{
+		if (d_menu != null)
+		{
+			d_menu.destroy();
+		}
+
+		var menu = new Gtk.Menu();
+		menu.attach_to_widget(parent, null);
+
+		d_menu = menu;
+
+		var change = new Gtk.MenuItem.with_mnemonic(_("_Show what the rewind changes"));
+
+		change.activate.connect(() => {
+			show_change(move.branch, move.now, move.after);
+		});
+
+		menu.append(change);
+
+		var landing = new Gtk.MenuItem.with_mnemonic(_("Show the _commit it lands on"));
+
+		landing.activate.connect(() => {
+			show_landing(move.after);
+		});
+
+		menu.append(landing);
+
+		menu.show_all();
+		menu.popup_at_pointer(event);
+	}
+
+	private Gtk.Widget row_box(Gtk.Label branch, Gtk.Label now, Gtk.Label after)
+	{
+		d_branch_group.add_widget(branch);
+		d_now_group.add_widget(now);
+		d_after_group.add_widget(after);
+
+		var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 16);
+		box.add(branch);
+		box.add(now);
+		box.add(after);
+
+		return box;
 	}
 
 	private void copy_command()
