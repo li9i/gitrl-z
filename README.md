@@ -6,6 +6,8 @@ The reflog records every position of every branch: commits a rebase rewrote, com
 
 It lists the reflog the way `gitg` shows history. Click an entry and the commit graph redraws with that branch moved to where a reset would put it, so you see the history you get before you get it. `gitrl-z` gives you the command but running it stays your decision. **It writes nothing to the repository.**
 
+The second mouse button opens a menu on any entry: the diff of that commit, its SHA, and, on the coloured branch pill, the name of the branch.
+
 > [!TIP]
 > gitrl-z is ronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
 
@@ -15,13 +17,13 @@ It lists the reflog the way `gitg` shows history. Click an entry and the commit 
 
 One branch at a time is often not the question. The question is what the repository looked like an hour ago, before disaster struck.
 
-**All branches**, at the top of the sidebar, answers that. It puts a dial above the graph. Every stop on the dial is a moment the repository actually passed through, gathered from the reflogs of all local branches. Move the dial and every branch goes back to where it stood at that moment, all together, and the graph redraws at each stop. Branches that did not exist yet are listed as removed.
+**All branches**, in the sidebar, answers that, and it is where the window opens. It puts a dial above the graph. Every stop on the dial is a moment the repository actually passed through, gathered from the reflogs of all local branches. Move the dial and every branch goes back to where it stood at that moment, all together, and the graph redraws at each stop. Branches that did not exist yet are listed as removed.
 
 The stops sit where the moments fall in time, so an hour of work reads as a cluster and a quiet fortnight as a gap. Long stretches of quiet are drawn shorter than they were, otherwise they take the whole dial and leave the busy part too small to click.
 
 ![The dial moved back through the moments the repository passed through, every branch moving with it](docs/screenshots/demo-rewind.gif)
 
-Button **Rewind to this point** lists where each branch will land and the commands that will take the repository there.
+Button **Rewind to this point** lists where each branch will land and the commands that will take the repository there. Double click a branch that moves and you get the diff between where it stands now and where it lands. You see what the rewind costs you and what it gives back, file by file. The second mouse button on the same row offers that diff, and the commit the branch lands on.
 
 ## What it gets back
 
@@ -131,7 +133,7 @@ gitrlz /path/to/repo
 
 Run outside a repository, `gitrlz` opens a chooser listing recently used ones.
 
-`F5` reloads. `Ctrl+Q` quits. The window follows the repository as it changes, so a commit or rebase in another terminal shows up without you touching anything.
+`F5` reloads. `Ctrl+Q` quits. The window follows the repository as it changes, so a commit or rebase in another terminal shows up without you touching anything. A dial that you move back stays where you put it.
 
 ## Licence
 
