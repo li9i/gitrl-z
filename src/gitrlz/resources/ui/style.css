@@ -196,3 +196,7 @@ GitgHistoryRefRow {
 	min-height: 6px;
 }
 
+.csd.popup decoration {
+	border: none;
+	box-shadow: none;
+}
