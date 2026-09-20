@@ -186,7 +186,7 @@ GitgHistoryRefRow {
 }
 
 .gitrlz-dialog decoration {
-	border: 1px solid @borders;
+	border: 1px solid shade(@theme_bg_color, 0.8);
 	border-radius: 8px;
 }
 
