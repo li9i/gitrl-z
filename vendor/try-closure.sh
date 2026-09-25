@@ -31,7 +31,8 @@ valac -C -d "$out" \
 	--pkg glib-2.0 \
 	--pkg gee-0.8 \
 	--pkg libgit2-glib-1.0 \
-	--pkg libdazzle-1.0 \
+	--pkg gdk-3.0 \
+	--pkg gtksourceview-4 \
 	--pkg gsettings-desktop-schemas \
 	--target-glib 2.68 \
 	--gresources "$root/src/vendor-gitg/libgitg/resources/resources.xml" \

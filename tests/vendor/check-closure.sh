@@ -11,10 +11,10 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 find src/vendor-gitg -name '*.vala' | sed 's|^src/vendor-gitg/||' | sort > "$tmp/present"
-grep -oE "'(libgitg|libgitg-ext)/[a-z0-9-]+\.vala'" src/vendor-gitg/meson.build \
+grep -oE "'((libgitg|libgitg-ext)/[a-z0-9-]+\.vala|gitrlz-[a-z0-9-]+\.vala)'" src/vendor-gitg/meson.build \
 	| tr -d "'" | sort > "$tmp/listed"
 
-present=$(cat "$tmp/present")
+present=$(grep -v '^gitrlz-' "$tmp/present" || true)
 unlisted=$(comm -23 "$tmp/present" "$tmp/listed")
 missing=$(comm -13 "$tmp/present" "$tmp/listed")
 
