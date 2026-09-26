@@ -17,7 +17,7 @@ that only you have.
   `Build-Depends`. A Launchpad buildd makes the same check.
 - The install, remove and purge operations are verified in an unmodified
   `ubuntu:24.04`.
-- The package is `gitrl-z`. The command is `gitrlz`. The version is `0.8.0-1`,
+- The package is `gitrl-z`. The command is `gitrlz`. The version is `0.8.1-1`,
   built for **noble** (24.04) and **resolute** (26.04).
 
 ## Preliminary steps

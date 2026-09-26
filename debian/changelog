@@ -1,3 +1,12 @@
+gitrl-z (0.8.1-1) noble; urgency=medium
+
+  * Build the orig tarball from only the files that git tracks, for the
+    binary and the source package builds. Untracked and ignored files in the
+    checkout do not go into the package. The application is the same as in
+    0.8.0.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Sat, 26 Sep 2026 13:07:45 +0200
+
 gitrl-z (0.8.0-1) noble; urgency=medium
 
   * Show the diff that a rewind makes. In the Rewind to this point window, a
