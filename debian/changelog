@@ -1,3 +1,31 @@
+gitrl-z (0.8.0-1) noble; urgency=medium
+
+  * Show the diff that a rewind makes. In the Rewind to this point window, a
+    double click on a row that moves shows the commit the branch lands on.
+    The menu of the row gives that commit and the diff of the whole move,
+    from where the branch stands now to where it lands. The diff comes from
+    the trees of the two commits and is made again when the diff options
+    change.
+  * Open the window on All branches rather than on HEAD. The dial keeps the
+    moment it rests on when the repository changes below it. A branch that
+    is no longer there still sends the sidebar to HEAD.
+  * Space the stops of the rewind dial by the time between the moments. A
+    gap is held between a sixth and six times the typical gap of the dial,
+    so a long quiet stretch cannot take the whole dial and a burst of work
+    stays wide enough to click. Every way of moving the dial lands on a
+    moment the repository passed through.
+  * Add Copy name to the menu of the branch pill on a reflog row.
+  * Take the frame colour of the rewind window from the background colour of
+    the theme. Themes that name no border colour gave it a black frame.
+  * Draw one border around the right click menu instead of two.
+  * Drop libdazzle from the contributor setup and the closure scripts. Ubuntu
+    26.04 does not carry it, and the one function in use has been in the
+    tree since 0.2.1.
+  * Keep a built AppImage out of the orig tarball, for the binary and the
+    source package builds alike.
+
+ -- alexandros filotheou <alexandros.filotheou@gmail.com>  Sat, 26 Sep 2026 12:30:00 +0200
+
 gitrl-z (0.7.0-1) noble; urgency=medium
 
   * Rewind every local branch from a dial over the graph. The reflogs of all

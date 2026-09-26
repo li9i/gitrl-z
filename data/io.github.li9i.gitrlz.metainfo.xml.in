@@ -62,6 +62,23 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.8.0" date="2026-09-26">
+      <description>
+        <p>
+          See what a rewind does to the files. In the rewind window, a double
+          click on a branch that moves shows the commit it lands on, and the
+          menu of the row also shows the diff of the whole move.
+        </p>
+        <p>
+          The window opens on All branches. The stops on the dial follow the
+          time between the moments, and the dial keeps its place while the
+          repository changes.
+        </p>
+        <p>
+          Copy the name of a branch from its pill in the reflog.
+        </p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-08-14">
       <description>
         <p>
