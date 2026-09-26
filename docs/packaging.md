@@ -138,42 +138,48 @@ instructions in `README.md` name no version, so a release does not change them.
 
 ## Build and sign the source package
 
-A PPA takes a **source** upload and builds the binary itself. The binary that
-you build locally is for tests only. You do not upload it.
+A PPA takes a **source** upload and builds the binary itself. The `.deb` files that you build locally are for the tests and the GitHub release only. You do not upload them.
+
+`docker/build-source.sh` makes a source-only `.changes` for one series. Run it one time for each series. A source package links no library, so the two runs use the same container:
 
 ```bash
-# From a clean tree, in the build container:
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$PWD:/src" -w /src gitrlz-build:24.04 \
-    ./docker/build-deb.sh noble '~ubuntu24.04.1'
+    ./docker/build-source.sh noble '~ubuntu24.04.1'
 
-# Then sign, on the host, where your GPG key lives:
-cd _build/deb
-debsign -k <KEYID> gitrl-z_X.Y.Z-1~ubuntu24.04.1_amd64.changes
+docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+    -v "$PWD:/src" -w /src gitrlz-build:24.04 \
+    ./docker/build-source.sh resolute '~ubuntu26.04.1'
 ```
 
-`docker/build-deb.sh` builds unsigned (`-us -uc`). The container has no access
-to your key, and it must not have access.
+The first run writes `gitrl-z_X.Y.Z.orig.tar.gz` to `_build/ppa/` and keeps it there. The second run reuses it, so the two series upload the same tarball.
 
-If you need a source-only `.changes`, use these commands. Launchpad accepts the
-two forms, but source-only is cleaner:
+Check each source package before you sign it. As for the binary packages, `binary-nmu-debian-revision-in-source` is the only tag you should see:
 
 ```bash
-cd /path/to/clean/tree
-dpkg-buildpackage -S -sa
-debsign -k <KEYID> ../gitrl-z_X.Y.Z-1~ubuntu24.04.1_source.changes
+./tests/packaging/test-lintian.sh \
+    _build/ppa/gitrl-z_X.Y.Z-1~ubuntu24.04.1_source.changes
+./tests/packaging/test-lintian.sh \
+    _build/ppa/gitrl-z_X.Y.Z-1~ubuntu26.04.1_source.changes
 ```
+
+Then sign, on the host, where your GPG key lives:
+
+```bash
+debsign -k <KEYID> _build/ppa/gitrl-z_X.Y.Z-1~ubuntu*_source.changes
+```
+
+`docker/build-source.sh` builds unsigned (`-us -uc`). The container has no access to your key, and it must not have access.
 
 ## Upload
 
 ```bash
-dput ppa:li9i/gitrl-z gitrl-z_X.Y.Z-1~ubuntu24.04.1_source.changes
+dput ppa:li9i/gitrl-z _build/ppa/gitrl-z_X.Y.Z-1~ubuntu*_source.changes
 ```
 
-Upload once per series, with the `.changes` that names that series.
+This command uploads the two series. Give the version in the name, because `_build/ppa` also keeps the files of earlier releases.
 
-`dput` is in the build container, but run this command on the host. It needs
-your key and your network identity.
+`dput` is in the build container, but run this command on the host. It needs your key and your network identity.
 
 ## After the upload
 
@@ -199,19 +205,9 @@ your key and your network identity.
 - **You cannot upload a rejected upload again with the same version.**
   Launchpad keeps the version, also for a failed build. Increase the revision
   to `-2` and upload again. Do not try to replace it.
-- **You upload the `orig.tar.gz` one time only.** Subsequent Debian revisions
-  of the same upstream version must *not* include it. If they include it,
-  Launchpad rejects the upload because of a file conflict. Use `-sd` in place
-  of `-sa` after the first upload.
-- **`Distribution` in `debian/changelog` must agree with the PPA series.** If
-  an upload names a series that the PPA does not build for, Launchpad discards
-  the upload and gives no message. `docker/build-deb.sh` writes that line from
-  its first argument, so pass the codename of the series you are building for.
-- **The source package carries the working tree.** `docker/build-deb.sh` tars
-  the checkout, less `_build`, `.git`, `vendor/upstream` and any `.AppImage`.
-  The AppImage is excluded because building it before the packages otherwise
-  puts 36 MB of prebuilt binary in the source, which lintian reports as
-  `source-is-missing`. Anything else you leave in the tree does travel.
+- **You upload the `orig.tar.gz` one time only.** Subsequent Debian revisions of the same upstream version must *not* include it. If they include it, Launchpad rejects the upload because of a file conflict. Keep `_build/ppa` between revisions. `docker/build-source.sh` then reuses the kept tarball and does not pass `-sa`, so the upload leaves the tarball out.
+- **`Distribution` in `debian/changelog` must agree with the PPA series.** If an upload names a series that the PPA does not build for, Launchpad discards the upload and gives no message. `docker/build-deb.sh` and `docker/build-source.sh` write that line from their first argument, so pass the codename of the series you are building for.
+- **The source package carries the working tree.** `docker/build-deb.sh` and `docker/build-source.sh` tar the checkout, less `_build`, `.git`, `vendor/upstream` and any `.AppImage`. The AppImage is excluded because building it before the packages otherwise puts 36 MB of prebuilt binary in the source, which lintian reports as `source-is-missing`. Anything else you leave in the tree does travel.
 - **The orig tarball is about 2.6 MB.** It holds the vendored gitg subtree and
   the animations in `docs/screenshots`. This is intentional. The package is
   self-contained, and it does not build against a `libgitg`, because Ubuntu

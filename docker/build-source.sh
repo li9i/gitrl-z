@@ -25,6 +25,7 @@ else
     saflag=-sa
     echo "generating orig $orig"
     tar --exclude=_build --exclude=.git --exclude=vendor/upstream \
+        --exclude='*.AppImage' \
         -C "$src" -cf - . | tar -C "$pkgdir" -xf -
     tar --exclude=./debian -C "$pkgdir" -czf "$work/$orig" .
     cp "$work/$orig" "$src/_build/ppa/$orig"
