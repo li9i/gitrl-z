@@ -9,7 +9,7 @@ It lists the reflog the way `gitg` shows history. Click an entry and the commit 
 The second mouse button opens a menu on any entry: the diff of that commit, its SHA, and, on the coloured branch pill, the name of the branch.
 
 > [!TIP]
-> gitrl-z is ronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
+> gitrl-z is pronounced git-ROL-ZEE (/ɡɪtˈrəʊlziː/), after ctrl-z said aloud: control zee.
 
 ![HEAD walked backwards one entry at a time, with the commit graph redrawn under each one](docs/screenshots/demo-head.gif)
 
