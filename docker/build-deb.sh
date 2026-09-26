@@ -24,9 +24,7 @@ pkgdir="$work/gitrl-z-$version"
 rm -rf "$work"
 mkdir -p "$pkgdir"
 
-tar --exclude=_build --exclude=.git --exclude=vendor/upstream \
-    --exclude='*.AppImage' \
-    -C "$src" -cf - . | tar -C "$pkgdir" -xf -
+git -C "$src" ls-files -z | tar -C "$src" --null -T - -cf - | tar -C "$pkgdir" -xf -
 
 if [ -n "$series" ] || [ -n "$suffix" ]; then
     sed -i "1s|.*|gitrl-z ($full$suffix) $target_series; urgency=medium|" \

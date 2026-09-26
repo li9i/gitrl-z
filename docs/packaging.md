@@ -163,6 +163,12 @@ Check each source package before you sign it. As for the binary packages, `binar
     _build/ppa/gitrl-z_X.Y.Z-1~ubuntu26.04.1_source.changes
 ```
 
+Then make sure that the tarball contains only the tracked files. The test compares the tarball with `git ls-files`, less `debian/`, and shows each difference:
+
+```bash
+./tests/packaging/test-orig-contents.sh _build/ppa/gitrl-z_X.Y.Z.orig.tar.gz
+```
+
 Then sign, on the host, where your GPG key lives:
 
 ```bash
@@ -207,8 +213,8 @@ This command uploads the two series. Give the version in the name, because `_bui
   to `-2` and upload again. Do not try to replace it.
 - **You upload the `orig.tar.gz` one time only.** Subsequent Debian revisions of the same upstream version must *not* include it. If they include it, Launchpad rejects the upload because of a file conflict. Keep `_build/ppa` between revisions. `docker/build-source.sh` then reuses the kept tarball and does not pass `-sa`, so the upload leaves the tarball out.
 - **`Distribution` in `debian/changelog` must agree with the PPA series.** If an upload names a series that the PPA does not build for, Launchpad discards the upload and gives no message. `docker/build-deb.sh` and `docker/build-source.sh` write that line from their first argument, so pass the codename of the series you are building for.
-- **The source package carries the working tree.** `docker/build-deb.sh` and `docker/build-source.sh` tar the checkout, less `_build`, `.git`, `vendor/upstream` and any `.AppImage`. The AppImage is excluded because building it before the packages otherwise puts 36 MB of prebuilt binary in the source, which lintian reports as `source-is-missing`. Anything else you leave in the tree does travel.
-- **The orig tarball is about 2.6 MB.** It holds the vendored gitg subtree and
+- **The source package contains only the tracked files.** `docker/build-deb.sh` and `docker/build-source.sh` give tar the files that `git ls-files` shows, with their contents from the working tree. Untracked and ignored files, for example `_build`, `vendor/upstream` and an `.AppImage`, are not in the package. A new file goes into the package only after you `git add` it.
+- **The orig tarball is about 1.2 MB.** It holds the vendored gitg subtree and
   the animations in `docs/screenshots`. This is intentional. The package is
   self-contained, and it does not build against a `libgitg`, because Ubuntu
   does not supply `libgitg` as a development package.
