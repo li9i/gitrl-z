@@ -18,6 +18,7 @@ fi
 
 full=$(dpkg-parsechangelog -l "$src/debian/changelog" -S Version)
 version=${full%-*}
+stamp=$(dpkg-parsechangelog -l "$src/debian/changelog" -S Timestamp)
 work=/tmp/gitrlz-build-deb
 pkgdir="$work/gitrl-z-$version"
 
@@ -25,6 +26,7 @@ rm -rf "$work"
 mkdir -p "$pkgdir"
 
 git -C "$src" ls-files -z | tar -C "$src" --null -T - -cf - | tar -C "$pkgdir" -xf -
+find "$pkgdir" -type d -exec touch -d "@$stamp" {} +
 
 if [ -n "$series" ] || [ -n "$suffix" ]; then
     sed -i "1s|.*|gitrl-z ($full$suffix) $target_series; urgency=medium|" \

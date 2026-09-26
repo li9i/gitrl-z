@@ -8,6 +8,7 @@ suffix=${2:-}
 src=/src
 full=$(dpkg-parsechangelog -l "$src/debian/changelog" -S Version)
 upstream=${full%-*}
+stamp=$(dpkg-parsechangelog -l "$src/debian/changelog" -S Timestamp)
 orig="gitrl-z_$upstream.orig.tar.gz"
 work=/tmp/gitrlz-build-source
 pkgdir="$work/gitrl-z-$upstream"
@@ -25,6 +26,7 @@ else
     saflag=-sa
     echo "generating orig $orig"
     git -C "$src" ls-files -z | tar -C "$src" --null -T - -cf - | tar -C "$pkgdir" -xf -
+    find "$pkgdir" -type d -exec touch -d "@$stamp" {} +
     tar --exclude=./debian -C "$pkgdir" -czf "$work/$orig" .
     cp "$work/$orig" "$src/_build/ppa/$orig"
 fi
